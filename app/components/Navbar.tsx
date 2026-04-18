@@ -6,9 +6,9 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "/#features", label: "Features" },
-  { href: "/roadmap", label: "Learn" },
-  { href: "/simulators", label: "Simulators" },
   { href: "/roadmap", label: "Roadmap" },
+  { href: "/simulators", label: "Simulators" },
+  { href: "/lesson/what-is-ai", label: "Lessons" },
 ];
 
 export default function Navbar() {
