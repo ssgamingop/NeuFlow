@@ -68,12 +68,12 @@ export default function Navbar() {
               <span className="absolute -bottom-0.5 left-0 w-0 h-[2px] bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300" />
             </a>
           ))}
-          <a
-            href="#start"
+          <Link
+            href="/roadmap"
             className="text-sm px-5 py-2 rounded-full bg-gradient-to-r from-primary to-accent text-white font-medium hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] transition-all duration-300 hover:scale-105"
           >
             Start Learning
-          </a>
+          </Link>
         </div>
 
         {/* Mobile Toggle */}
@@ -119,12 +119,12 @@ export default function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <a
-                href="#start"
+              <Link
+                href="/roadmap"
                 className="text-center px-5 py-3 rounded-full bg-gradient-to-r from-primary to-accent text-white font-medium"
               >
                 Start Learning
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}

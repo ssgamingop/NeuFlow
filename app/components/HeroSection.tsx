@@ -171,11 +171,11 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.45 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <GlowButton variant="primary" size="lg" href="#learn">
+          <GlowButton variant="primary" size="lg" href="/roadmap">
             <Sparkles className="w-4 h-4" />
             Start Learning
           </GlowButton>
-          <GlowButton variant="secondary" size="lg" href="#features">
+          <GlowButton variant="secondary" size="lg" href="/simulators">
             Explore Visuals
             <ArrowRight className="w-4 h-4" />
           </GlowButton>
