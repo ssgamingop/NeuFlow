@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html, Stars } from "@react-three/drei";
 import * as THREE from "three";
@@ -14,6 +14,19 @@ const words = [
   { text: "Apple", pos: [0, 2, -2], color: "#f472b6" },
   { text: "Banana", pos: [-0.5, 2.2, -1.8], color: "#f472b6" },
 ];
+
+function Connection({ a, b, color }: { a: typeof words[0], b: typeof words[0], color: string }) {
+  const lineObj = useMemo(() => {
+    const geom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...a.pos),
+      new THREE.Vector3(...b.pos),
+    ]);
+    const mat = new THREE.LineBasicMaterial({ color, opacity: 0.3, transparent: true });
+    return new THREE.Line(geom, mat);
+  }, [a, b, color]);
+
+  return <primitive object={lineObj} />;
+}
 
 function WordClouds() {
   const groupRef = useRef<THREE.Group>(null);
@@ -50,50 +63,10 @@ function WordClouds() {
       ))}
 
       {/* Lines between related concepts */}
-      <line>
-        <bufferGeometry attach="geometry">
-          <bufferAttribute
-            attach="attributes-position"
-            array={new Float32Array([...words[0].pos, ...words[1].pos])}
-            itemSize={3}
-            count={2}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial attach="material" color="#8b5cf6" opacity={0.3} transparent />
-      </line>
-      <line>
-        <bufferGeometry attach="geometry">
-          <bufferAttribute
-            attach="attributes-position"
-            array={new Float32Array([...words[0].pos, ...words[2].pos])}
-            itemSize={3}
-            count={2}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial attach="material" color="#8b5cf6" opacity={0.3} transparent />
-      </line>
-      <line>
-        <bufferGeometry attach="geometry">
-          <bufferAttribute
-            attach="attributes-position"
-            array={new Float32Array([...words[3].pos, ...words[4].pos])}
-            itemSize={3}
-            count={2}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial attach="material" color="#06b6d4" opacity={0.3} transparent />
-      </line>
-      <line>
-        <bufferGeometry attach="geometry">
-          <bufferAttribute
-            attach="attributes-position"
-            array={new Float32Array([...words[5].pos, ...words[6].pos])}
-            itemSize={3}
-            count={2}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial attach="material" color="#f472b6" opacity={0.3} transparent />
-      </line>
+      <Connection a={words[0]} b={words[1]} color="#8b5cf6" />
+      <Connection a={words[0]} b={words[2]} color="#8b5cf6" />
+      <Connection a={words[3]} b={words[4]} color="#06b6d4" />
+      <Connection a={words[5]} b={words[6]} color="#f472b6" />
     </group>
   );
 }

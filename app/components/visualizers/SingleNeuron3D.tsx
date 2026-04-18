@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars, Sphere } from "@react-three/drei";
 import * as THREE from "three";
 
 function PulseLine({ start, end, color, speed = 1, delay = 0 }: { start: [number, number, number], end: [number, number, number], color: string, speed?: number, delay?: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
-  const vStart = new THREE.Vector3(...start);
-  const vEnd = new THREE.Vector3(...end);
+  const vStart = useMemo(() => new THREE.Vector3(...start), [start]);
+  const vEnd = useMemo(() => new THREE.Vector3(...end), [end]);
 
   useFrame((state) => {
     if (!meshRef.current) return;
@@ -19,20 +19,16 @@ function PulseLine({ start, end, color, speed = 1, delay = 0 }: { start: [number
     (meshRef.current.material as THREE.MeshBasicMaterial).opacity = opacity;
   });
 
+  const lineObj = useMemo(() => {
+    const geom = new THREE.BufferGeometry().setFromPoints([vStart, vEnd]);
+    const mat = new THREE.LineBasicMaterial({ color, opacity: 0.2, transparent: true });
+    return new THREE.Line(geom, mat);
+  }, [vStart, vEnd, color]);
+
   return (
     <group>
       {/* The physical connection line */}
-      <line>
-        <bufferGeometry attach="geometry">
-          <bufferAttribute
-            attach="attributes-position"
-            array={new Float32Array([...start, ...end])}
-            itemSize={3}
-            count={2}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial attach="material" color={color} opacity={0.2} transparent />
-      </line>
+      <primitive object={lineObj} />
       {/* The traveling signal pulse */}
       <mesh ref={meshRef}>
         <sphereGeometry args={[0.08, 16, 16]} />

@@ -5,10 +5,12 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
 
+import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js";
+
 function SurfaceMesh() {
   // Create a custom parametric geometry for x^2 + y^2 like surface
   const geometry = useMemo(() => {
-    return new THREE.ParametricGeometry((u: number, v: number, target: THREE.Vector3) => {
+    return new ParametricGeometry((u: number, v: number, target: THREE.Vector3) => {
       // Map u, v (0 to 1) to x, z (-3 to 3)
       const x = (u - 0.5) * 6;
       const z = (v - 0.5) * 6;
