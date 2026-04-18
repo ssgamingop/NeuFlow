@@ -69,12 +69,11 @@ function InteractiveTitle() {
       <span
         className="inline-block"
         style={{
-          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, #c084fc, #8b5cf6, #06b6d4, #f472b6)`,
+          backgroundImage: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, #c084fc, #8b5cf6, #06b6d4, #f472b6)`,
+          backgroundClip: "text",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
           filter: "drop-shadow(0 0 30px rgba(139,92,246,0.4))",
-          transition: "background 0.3s ease",
         }}
       >
         AI Thinks
