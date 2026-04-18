@@ -1,8 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import GlowButton from "./ui/GlowButton";
+import DataFlowCanvas from "./DataFlowCanvas";
 import { Sparkles, ArrowRight } from "lucide-react";
 
 const NeuralNetworkScene = dynamic(
@@ -10,31 +12,124 @@ const NeuralNetworkScene = dynamic(
   { ssr: false }
 );
 
+/* ─── Mouse-following cursor glow ─── */
+function CursorGlow() {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, { stiffness: 50, damping: 20 });
+  const springY = useSpring(y, { stiffness: 50, damping: 20 });
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      x.set(e.clientX);
+      y.set(e.clientY);
+    };
+    window.addEventListener("mousemove", move);
+    return () => window.removeEventListener("mousemove", move);
+  }, [x, y]);
+
+  return (
+    <motion.div
+      className="fixed w-[500px] h-[500px] rounded-full pointer-events-none z-[2]"
+      style={{
+        x: springX,
+        y: springY,
+        translateX: "-50%",
+        translateY: "-50%",
+        background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)",
+      }}
+    />
+  );
+}
+
+/* ─── Interactive gradient text that responds to mouse ─── */
+function InteractiveTitle() {
+  const ref = useRef<HTMLHeadingElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const handleMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setMousePos({ x, y });
+    };
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
+
+  return (
+    <h1
+      ref={ref}
+      className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight mb-6"
+    >
+      See How{" "}
+      <span
+        className="inline-block"
+        style={{
+          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, #c084fc, #8b5cf6, #06b6d4, #f472b6)`,
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+          filter: "drop-shadow(0 0 30px rgba(139,92,246,0.4))",
+          transition: "background 0.3s ease",
+        }}
+      >
+        AI Thinks
+      </span>
+    </h1>
+  );
+}
+
 export default function HeroSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Scroll-based parallax: hero zooms out and fades as user scrolls
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.85]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, -60]);
+
   return (
     <section
       id="hero"
+      ref={sectionRef}
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
       {/* Multi-layer background */}
-      <div className="absolute inset-0 bg-[#030014]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(139,92,246,0.12)_0%,_transparent_60%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,_rgba(6,182,212,0.08)_0%,_transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,_rgba(244,114,182,0.06)_0%,_transparent_50%)]" />
+      <div className="absolute inset-0 hero-bg" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(139,92,246,0.15)_0%,_transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_80%,_rgba(6,182,212,0.08)_0%,_transparent_45%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,_rgba(244,114,182,0.06)_0%,_transparent_45%)]" />
 
-      {/* 3D Scene */}
+      {/* 3D Neural Network */}
       <NeuralNetworkScene />
 
-      {/* Center content overlay — ensures text is always readable */}
-      <div className="absolute inset-0 z-10 pointer-events-none">
-        <div className="absolute inset-x-0 top-[15%] bottom-[10%] bg-[radial-gradient(ellipse_at_center,_rgba(3,0,20,0.7)_0%,_transparent_70%)]" />
+      {/* Data flow canvas overlay */}
+      <DataFlowCanvas />
+
+      {/* Cursor-following glow */}
+      <CursorGlow />
+
+      {/* Readability overlay behind center text */}
+      <div className="absolute inset-0 z-[3] pointer-events-none">
+        <div className="absolute inset-x-0 top-[10%] bottom-[5%] bg-[radial-gradient(ellipse_60%_50%_at_center,_rgba(3,0,20,0.75)_0%,_transparent_100%)]" />
       </div>
 
       {/* Gradient fade at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background via-background/80 to-transparent z-10" />
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background via-background/90 to-transparent z-[4]" />
 
-      {/* Content */}
-      <div className="relative z-20 text-center px-6 max-w-4xl mx-auto">
+      {/* Content — scrolls with parallax */}
+      <motion.div
+        style={{ scale: heroScale, opacity: heroOpacity, y: heroY }}
+        className="relative z-[5] text-center px-6 max-w-4xl mx-auto"
+      >
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -49,16 +144,14 @@ export default function HeroSection() {
           Interactive AI Learning Platform
         </motion.div>
 
-        {/* Title */}
-        <motion.h1
+        {/* Interactive title */}
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.15 }}
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight mb-6"
         >
-          See How{" "}
-          <span className="gradient-text glow-text">AI Thinks</span>
-        </motion.h1>
+          <InteractiveTitle />
+        </motion.div>
 
         {/* Subtitle */}
         <motion.p
@@ -94,7 +187,7 @@ export default function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5, duration: 1 }}
-          className="mt-20"
+          className="mt-16"
         >
           <motion.div
             animate={{ y: [0, 8, 0] }}
@@ -108,7 +201,7 @@ export default function HeroSection() {
             />
           </motion.div>
         </motion.div>
-      </div>
+      </motion.div>
     </section>
   );
 }
