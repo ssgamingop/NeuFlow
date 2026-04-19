@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 
 const navLinks = [
   { href: "/#features", label: "Features" },
@@ -14,6 +16,10 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const line1Ref = useRef<HTMLSpanElement>(null);
+  const line2Ref = useRef<HTMLSpanElement>(null);
+  const line3Ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -21,11 +27,31 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useGSAP(() => {
+    if (navRef.current) {
+        gsap.fromTo(navRef.current, 
+            { y: -100 }, 
+            { y: 0, duration: 0.6, ease: "easeOut" }
+        );
+    }
+  }, []);
+
+  // Menu iconic lines animation
+  useEffect(() => {
+      if (mobileOpen) {
+          gsap.to(line1Ref.current, { rotate: 45, y: 6, duration: 0.3 });
+          gsap.to(line2Ref.current, { opacity: 0, duration: 0.2 });
+          gsap.to(line3Ref.current, { rotate: -45, y: -6, duration: 0.3 });
+      } else {
+          gsap.to(line1Ref.current, { rotate: 0, y: 0, duration: 0.3 });
+          gsap.to(line2Ref.current, { opacity: 1, duration: 0.2 });
+          gsap.to(line3Ref.current, { rotate: 0, y: 0, duration: 0.3 });
+      }
+  }, [mobileOpen]);
+
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+    <nav
+      ref={navRef}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled
           ? "bg-background/60 backdrop-blur-xl border-b border-primary/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
@@ -82,31 +108,20 @@ export default function Navbar() {
           className="md:hidden flex flex-col gap-1.5 p-2"
           aria-label="Toggle menu"
         >
-          <motion.span
-            animate={mobileOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
-            className="block w-6 h-[2px] bg-foreground origin-center"
-          />
-          <motion.span
-            animate={mobileOpen ? { opacity: 0 } : { opacity: 1 }}
-            className="block w-6 h-[2px] bg-foreground"
-          />
-          <motion.span
-            animate={
-              mobileOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }
-            }
-            className="block w-6 h-[2px] bg-foreground origin-center"
-          />
+          <span ref={line1Ref} className="block w-6 h-[2px] bg-foreground origin-center" />
+          <span ref={line2Ref} className="block w-6 h-[2px] bg-foreground" />
+          <span ref={line3Ref} className="block w-6 h-[2px] bg-foreground origin-center" />
         </button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Only keeping AnimatePresence for clean unmounting */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-background/80 backdrop-blur-xl border-t border-primary/10"
+            className="md:hidden bg-background/80 backdrop-blur-xl border-t border-primary/10 overflow-hidden"
           >
             <div className="flex flex-col gap-4 px-6 py-6">
               {navLinks.map((link) => (
@@ -121,6 +136,7 @@ export default function Navbar() {
               ))}
               <Link
                 href="/roadmap"
+                onClick={() => setMobileOpen(false)}
                 className="text-center px-5 py-3 rounded-full bg-gradient-to-r from-primary to-accent text-white font-medium"
               >
                 Start Learning
@@ -129,6 +145,6 @@ export default function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.nav>
+    </nav>
   );
 }
