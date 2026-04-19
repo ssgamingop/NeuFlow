@@ -1,32 +1,63 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { useRef } from "react";
 import { lessons } from "@/lib/lessons";
 import { useProgressStore } from "@/lib/store";
-import { CheckCircle, Lock, ArrowRight, Trophy } from "lucide-react";
+import { CheckCircle, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 
 export default function RoadmapPage() {
   const { isCompleted, getProgress, completedLessons } = useProgressStore();
   const progress = getProgress();
+  const pageRef = useRef<HTMLElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    // Header Entrance
+    gsap.fromTo(".roadmap-header",
+       { opacity: 0, y: 30 },
+       { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
+    );
+
+    // Progress Bar Animation
+    if (progressBarRef.current) {
+        gsap.fromTo(progressBarRef.current,
+           { width: "0%" },
+           { width: `${progress}%`, duration: 1.5, delay: 0.5, ease: "power2.out" }
+        );
+    }
+
+    // Nodes Stagger (Stagger from left and right alternately)
+    const nodes = document.querySelectorAll(".roadmap-node");
+    nodes.forEach((node, i) => {
+        const isEven = i % 2 === 0;
+        gsap.fromTo(node,
+            { opacity: 0, x: isEven ? -40 : 40 },
+            { opacity: 1, x: 0, duration: 0.7, delay: i * 0.15 + 0.3, ease: "back.out(1.2)" }
+        );
+    });
+
+    // Trophy Pop
+    gsap.fromTo(".roadmap-trophy",
+       { opacity: 0, scale: 0 },
+       { opacity: 1, scale: 1, duration: 0.8, delay: nodes.length * 0.15 + 0.5, ease: "elastic.out(1, 0.5)" }
+    );
+  }, { scope: pageRef });
 
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-24 pb-20">
+      <main ref={pageRef} className="min-h-screen pt-24 pb-20">
         {/* Background */}
         <div className="fixed inset-0 -z-10 hero-bg" />
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_rgba(139,92,246,0.08)_0%,_transparent_60%)]" />
 
         <div className="max-w-4xl mx-auto px-6">
           {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
+          <div className="roadmap-header text-center mb-16 opacity-0 translate-y-8">
             <span className="text-sm text-accent font-medium tracking-widest uppercase mb-4 block">
               Your Journey
             </span>
@@ -44,15 +75,14 @@ export default function RoadmapPage() {
                 <span className="font-semibold text-primary">{Math.round(progress)}%</span>
               </div>
               <div className="h-2 rounded-full bg-surface-light overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 1, delay: 0.3 }}
+                <div
+                  ref={progressBarRef}
                   className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                  style={{ width: "0%" }}
                 />
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Lesson nodes */}
           <div className="relative">
@@ -64,12 +94,9 @@ export default function RoadmapPage() {
               const isEven = i % 2 === 0;
 
               return (
-                <motion.div
+                <div
                   key={lesson.slug}
-                  initial={{ opacity: 0, x: isEven ? -40 : 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.12, duration: 0.6 }}
-                  className={`relative flex items-center mb-12 ${
+                  className={`roadmap-node opacity-0 relative flex items-center mb-12 ${
                     isEven ? "md:flex-row" : "md:flex-row-reverse"
                   }`}
                 >
@@ -100,7 +127,7 @@ export default function RoadmapPage() {
                   >
                     <Link href={`/lesson/${lesson.slug}`}>
                       <div
-                        className={`glass rounded-2xl p-6 group cursor-pointer transition-all duration-300 hover:border-primary/40 ${
+                        className={`glass rounded-2xl p-6 group cursor-pointer transition-all duration-300 hover:border-primary/40 hover:-translate-y-1 hover:shadow-xl ${
                           completed ? "border-primary/20" : ""
                         }`}
                         style={{
@@ -151,7 +178,7 @@ export default function RoadmapPage() {
                             </span>
                           ) : (
                             <span
-                              className="flex items-center gap-1 font-medium"
+                              className="flex items-center gap-1 font-medium transition-transform group-hover:translate-x-1"
                               style={{ color: lesson.color }}
                             >
                               Start <ArrowRight className="w-3 h-3" />
@@ -161,17 +188,12 @@ export default function RoadmapPage() {
                       </div>
                     </Link>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
 
             {/* Completion trophy */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8, type: "spring" }}
-              className="relative flex justify-center"
-            >
+            <div className="roadmap-trophy opacity-0 scale-0 relative flex justify-center">
               <div className="absolute left-8 md:left-1/2 -translate-x-1/2">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${
@@ -187,7 +209,7 @@ export default function RoadmapPage() {
                   />
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </main>

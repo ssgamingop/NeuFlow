@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { useState, useRef } from "react";
 import { Brain, TrendingDown } from "lucide-react";
 import Navbar from "../components/Navbar";
 import dynamic from "next/dynamic";
@@ -30,29 +31,47 @@ const tabs = [
     Icon: Brain,
     color: "#8b5cf6",
     description:
-      "Watch data flow through a neural network. Adjust inputs, add hidden neurons, and observe forward propagation step by step.",
+      "Watch data flow through a 3D neural network. Adjust inputs, add hidden neurons, and observe forward propagation step by step.",
   },
 ];
 
 export default function SimulatorsPage() {
   const [activeTab, setActiveTab] = useState("gradient-descent");
+  const pageRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    // Header
+    gsap.fromTo(".sim-header",
+       { opacity: 0, y: 30 },
+       { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
+    );
+    // Tabs
+    gsap.fromTo(".sim-tab",
+       { opacity: 0, y: 20 },
+       { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, delay: 0.2, ease: "power2.out" }
+    );
+  }, { scope: pageRef });
+
+  // Animate simulator switch
+  useGSAP(() => {
+      gsap.fromTo(".sim-content", 
+         { opacity: 0, y: 20 },
+         { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
+      );
+  }, { dependencies: [activeTab], scope: containerRef });
 
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-24 pb-20">
+      <main ref={pageRef} className="min-h-screen pt-24 pb-20">
         {/* Background */}
         <div className="fixed inset-0 -z-10 hero-bg" />
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_rgba(139,92,246,0.06)_0%,_transparent_60%)]" />
 
         <div className="max-w-4xl mx-auto px-6">
           {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
+          <div className="sim-header text-center mb-12 opacity-0">
             <span className="text-sm text-neon-pink font-medium tracking-widest uppercase mb-4 block">
               Hands-On Tools
             </span>
@@ -62,16 +81,15 @@ export default function SimulatorsPage() {
             <p className="text-muted max-w-lg mx-auto text-lg">
               Tweak parameters and watch AI in action. No code required.
             </p>
-          </motion.div>
+          </div>
 
           {/* Tabs */}
           <div className="flex gap-3 mb-8 justify-center">
             {tabs.map((tab) => (
-              <motion.button
+              <button
                 key={tab.id}
-                whileTap={{ scale: 0.97 }}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                className={`sim-tab opacity-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 active:scale-95 ${
                   activeTab === tab.id
                     ? "bg-primary/15 text-primary-light border border-primary/30 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
                     : "text-muted hover:text-foreground hover:bg-surface-light border border-transparent"
@@ -79,33 +97,25 @@ export default function SimulatorsPage() {
               >
                 <tab.Icon className="w-4 h-4" />
                 {tab.label}
-              </motion.button>
+              </button>
             ))}
           </div>
 
-          {/* Active simulator description */}
-          <motion.p
-            key={activeTab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-muted text-center text-sm mb-8 max-w-lg mx-auto"
-          >
-            {tabs.find((t) => t.id === activeTab)?.description}
-          </motion.p>
+          <div ref={containerRef}>
+              {/* Active simulator description */}
+              <p className="sim-content opacity-0 text-muted text-center text-sm mb-8 max-w-lg mx-auto">
+                {tabs.find((t) => t.id === activeTab)?.description}
+              </p>
 
-          {/* Simulator */}
-          <motion.div
-            key={activeTab + "-sim"}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            {activeTab === "gradient-descent" ? (
-              <GradientDescentSimulator />
-            ) : (
-              <NeuralNetworkSimulator />
-            )}
-          </motion.div>
+              {/* Simulator */}
+              <div className="sim-content opacity-0">
+                {activeTab === "gradient-descent" ? (
+                  <GradientDescentSimulator />
+                ) : (
+                  <NeuralNetworkSimulator />
+                )}
+              </div>
+          </div>
         </div>
       </main>
     </>
