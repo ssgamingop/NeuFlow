@@ -1,193 +1,208 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Play, RotateCcw, Minus, Plus } from "lucide-react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Stars, Html } from "@react-three/drei";
+import * as THREE from "three";
+import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js";
+import gsap from "gsap";
 
-export default function GradientDescentSimulator() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [learningRate, setLearningRate] = useState(0.1);
-  const [isRunning, setIsRunning] = useState(false);
-  const [position, setPosition] = useState(4.5);
-  const [history, setHistory] = useState<number[]>([4.5]);
-  const [step, setStep] = useState(0);
-  const animRef = useRef<number>(0);
+/* ─── The 3D Math Logic ─── */
+// f(x, z) = x^2 + z^2 with some sine waves
+const costFn3D = (x: number, z: number) => {
+  return (Math.pow(x, 2) + Math.pow(z, 2)) * 0.15 + Math.sin(x * 2) * 0.2 + Math.cos(z * 2) * 0.2;
+};
 
-  // Cost function: f(x) = x^2 + 2*sin(2x) — has local minimum
-  const costFn = useCallback((x: number) => x * x * 0.5 + 2 * Math.sin(2 * x) + 5, []);
-  const gradientFn = useCallback((x: number) => x + 4 * Math.cos(2 * x), []);
+// Gradients (partial derivatives)
+const gradX = (x: number) => x * 0.3 + 0.4 * Math.cos(x * 2);
+const gradZ = (z: number) => z * 0.3 - 0.4 * Math.sin(z * 2);
 
-  const drawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+/* ─── 3D Surface Component ─── */
+function LandscapeSurface() {
+  const geometry = useMemo(() => {
+    return new ParametricGeometry((u: number, v: number, target: THREE.Vector3) => {
+      const x = (u - 0.5) * 8; // -4 to 4
+      const z = (v - 0.5) * 8; // -4 to 4
+      const y = costFn3D(x, z);
+      target.set(x, y, z);
+    }, 50, 50);
+  }, []);
 
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
+  return (
+    <mesh geometry={geometry} position={[0, -1, 0]}>
+      <meshStandardMaterial 
+        color="#8b5cf6" 
+        wireframe={true} 
+        transparent 
+        opacity={0.25} 
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
 
-    // Draw cost landscape
-    ctx.beginPath();
-    const xMin = -5;
-    const xMax = 5;
-    const yMax = 18;
+/* ─── The Agent rolling down the hill ─── */
+function AgentBall({ positionArr }: { positionArr: [number, number][] }) {
+  const ballRef = useRef<THREE.Mesh>(null!);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
-    for (let px = 0; px < w; px++) {
-      const x = xMin + (px / w) * (xMax - xMin);
-      const y = costFn(x);
-      const canvasY = h - (y / yMax) * h * 0.85 - 20;
-      if (px === 0) ctx.moveTo(px, canvasY);
-      else ctx.lineTo(px, canvasY);
+  // Animate the ball using GSAP whenever positionArr changes
+  useEffect(() => {
+    if (positionArr.length <= 1) {
+      if (ballRef.current && positionArr[0]) {
+        const [x, z] = positionArr[0];
+        ballRef.current.position.set(x, costFn3D(x, z) - 1 + 0.15, z);
+        setCurrentIdx(0);
+      }
+      return;
     }
 
-    // Fill under curve
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    const fillGrad = ctx.createLinearGradient(0, 0, 0, h);
-    fillGrad.addColorStop(0, "rgba(139,92,246,0.15)");
-    fillGrad.addColorStop(1, "rgba(139,92,246,0.02)");
-    ctx.fillStyle = fillGrad;
-    ctx.fill();
+    const dummy = { progress: 0 };
+    const maxIdx = positionArr.length - 1;
 
-    // Redraw curve line
-    ctx.beginPath();
-    for (let px = 0; px < w; px++) {
-      const x = xMin + (px / w) * (xMax - xMin);
-      const y = costFn(x);
-      const canvasY = h - (y / yMax) * h * 0.85 - 20;
-      if (px === 0) ctx.moveTo(px, canvasY);
-      else ctx.lineTo(px, canvasY);
-    }
-    const lineGrad = ctx.createLinearGradient(0, 0, w, 0);
-    lineGrad.addColorStop(0, "#8b5cf6");
-    lineGrad.addColorStop(0.5, "#06b6d4");
-    lineGrad.addColorStop(1, "#f472b6");
-    ctx.strokeStyle = lineGrad;
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    gsap.to(dummy, {
+      progress: 1,
+      duration: Math.min(positionArr.length * 0.1, 4), // Dynamic duration based on steps, max 4s
+      ease: "power2.out",
+      onUpdate: () => {
+         const floatIdx = dummy.progress * maxIdx;
+         const idxFloor = Math.floor(floatIdx);
+         const idxCeil = Math.min(idxFloor + 1, maxIdx);
+         const interp = floatIdx - idxFloor;
 
-    // Draw path
-    if (history.length > 1) {
-      ctx.beginPath();
-      history.forEach((hx, i) => {
-        const px = ((hx - xMin) / (xMax - xMin)) * w;
-        const py = h - (costFn(hx) / yMax) * h * 0.85 - 20;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      });
-      ctx.strokeStyle = "rgba(34,211,238,0.5)";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 3]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Draw all history dots
-    history.forEach((hx, i) => {
-      const px = ((hx - xMin) / (xMax - xMin)) * w;
-      const py = h - (costFn(hx) / yMax) * h * 0.85 - 20;
-      ctx.beginPath();
-      ctx.arc(px, py, i === history.length - 1 ? 7 : 3, 0, Math.PI * 2);
-      ctx.fillStyle =
-        i === history.length - 1
-          ? "#22d3ee"
-          : "rgba(139,92,246,0.5)";
-      ctx.fill();
-      if (i === history.length - 1) {
-        ctx.beginPath();
-        ctx.arc(px, py, 14, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(34,211,238,0.15)";
-        ctx.fill();
+         // Linear interpolation between the two step coordinates
+         const p1 = positionArr[idxFloor];
+         const p2 = positionArr[idxCeil];
+         
+         const x = p1[0] + (p2[0] - p1[0]) * interp;
+         const z = p1[1] + (p2[1] - p1[1]) * interp;
+         
+         if (ballRef.current) {
+             ballRef.current.position.set(x, costFn3D(x, z) - 1 + 0.15, z);
+         }
+         setCurrentIdx(Math.round(floatIdx));
       }
     });
 
-    // Axis labels
-    ctx.fillStyle = "rgba(148,163,184,0.6)";
-    ctx.font = "11px 'Space Grotesk', sans-serif";
-    ctx.fillText("Parameter Value →", w - 120, h - 5);
-    ctx.save();
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Cost →", -h / 2, 14);
-    ctx.restore();
-  }, [costFn, history]);
+    return () => { gsap.killTweensOf(dummy); };
+  }, [positionArr]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const resize = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (rect) {
-        canvas.width = rect.width;
-        canvas.height = 300;
-      }
-      drawCanvas();
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, [drawCanvas]);
+  const currentPos = positionArr[currentIdx] || positionArr[0];
 
-  useEffect(() => {
-    drawCanvas();
-  }, [history, drawCanvas]);
+  return (
+    <mesh ref={ballRef}>
+      <sphereGeometry args={[0.15, 32, 32]} />
+      <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={1} />
+      
+      {/* Floating UI label above ball */}
+      {currentPos && (
+          <Html position={[0, 0.4, 0]} center className="pointer-events-none">
+            <div className="bg-background/80 backdrop-blur-md border border-primary/30 px-2 py-1 rounded text-[10px] font-mono text-white whitespace-nowrap">
+              Cost: {costFn3D(currentPos[0], currentPos[1]).toFixed(3)}
+            </div>
+          </Html>
+      )}
+    </mesh>
+  );
+}
 
-  useEffect(() => {
-    if (!isRunning) return;
+export default function GradientDescentSimulator() {
+  const [learningRate, setLearningRate] = useState(0.2);
+  const [isRunning, setIsRunning] = useState(false);
+  const [history, setHistory] = useState<[number, number][]>([[3, 3]]); // Start at [3, 3]
 
-    const interval = setInterval(() => {
-      setPosition((prev) => {
-        const grad = gradientFn(prev);
-        const next = prev - learningRate * grad;
-        const clamped = Math.max(-5, Math.min(5, next));
-
-        setHistory((h) => [...h, clamped]);
-        setStep((s) => s + 1);
-
-        // Stop conditions
-        if (Math.abs(grad) < 0.001 || step > 80) {
-          setIsRunning(false);
-        }
-
-        return clamped;
-      });
-    }, 120);
-
-    return () => clearInterval(interval);
-  }, [isRunning, learningRate, gradientFn, step]);
+  const runDescent = () => {
+    if (isRunning) return;
+    setIsRunning(true);
+    
+    // Mathematically pre-calculate the total path trace immediately
+    const tempHistory: [number, number][] = [[3, 3]];
+    let currX = 3;
+    let currZ = 3;
+    
+    for (let step = 0; step < 100; step++) {
+       const gx = gradX(currX);
+       const gz = gradZ(currZ);
+       
+       currX = currX - learningRate * gx;
+       currZ = currZ - learningRate * gz;
+       
+       // Clamp to bounds
+       currX = Math.max(-4, Math.min(4, currX));
+       currZ = Math.max(-4, Math.min(4, currZ));
+       
+       tempHistory.push([currX, currZ]);
+       
+       // Stop if gradient is nearly 0
+       if (Math.abs(gx) < 0.001 && Math.abs(gz) < 0.001) break;
+    }
+    
+    setHistory(tempHistory);
+    
+    // Unlock button after animation est
+    setTimeout(() => {
+        setIsRunning(false);
+    }, Math.min(tempHistory.length * 0.1, 4) * 1000 + 500);
+  };
 
   const reset = () => {
     setIsRunning(false);
-    setPosition(4.5);
-    setHistory([4.5]);
-    setStep(0);
+    setHistory([[3, 3]]);
   };
+
+  const curr = history[history.length - 1];
+  const currentCost = costFn3D(curr[0], curr[1]);
 
   return (
     <div className="space-y-6">
-      {/* Canvas */}
-      <div className="glass rounded-2xl p-4 overflow-hidden">
-        <canvas ref={canvasRef} className="w-full rounded-lg" />
+      {/* 3D Canvas */}
+      <div className="glass rounded-2xl h-[350px] overflow-hidden relative border border-primary/20">
+        <Canvas camera={{ position: [0, 5, 8], fov: 45 }}>
+            <fog attach="fog" args={["#0a0a1f", 5, 20]} />
+            <ambientLight intensity={0.5} />
+            <directionalLight position={[5, 10, 5]} intensity={1} color="#f472b6" />
+            <Stars radius={10} depth={50} count={500} factor={2} fade speed={1} />
+            
+            <LandscapeSurface />
+            <AgentBall positionArr={history} />
+            
+            {/* Global Minimum Indicator */}
+            <mesh position={[0, costFn3D(0, 0) - 1, 0]}>
+                <sphereGeometry args={[0.2, 16, 16]} />
+                <meshBasicMaterial color="#f472b6" transparent opacity={0.5} />
+            </mesh>
+
+            <OrbitControls autoRotate={!isRunning} autoRotateSpeed={0.5} maxPolarAngle={Math.PI / 2.2} minPolarAngle={Math.PI / 6} />
+        </Canvas>
+        
+        <div className="absolute top-4 right-4 pointer-events-none">
+            <div className="bg-background/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-muted flex items-center gap-2">
+               <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+               OrbitControls Enabled
+            </div>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="glass rounded-xl p-3 text-center">
-          <p className="text-xs text-muted mb-1">Position</p>
+          <p className="text-xs text-muted mb-1">Final Position (x,z)</p>
           <p className="text-lg font-mono font-bold text-primary-light">
-            {position.toFixed(3)}
+            {curr[0].toFixed(2)}, {curr[1].toFixed(2)}
           </p>
         </div>
         <div className="glass rounded-xl p-3 text-center">
-          <p className="text-xs text-muted mb-1">Cost</p>
+          <p className="text-xs text-muted mb-1">Final Cost</p>
           <p className="text-lg font-mono font-bold text-accent-light">
-            {costFn(position).toFixed(3)}
+            {currentCost.toFixed(4)}
           </p>
         </div>
         <div className="glass rounded-xl p-3 text-center">
-          <p className="text-xs text-muted mb-1">Steps</p>
-          <p className="text-lg font-mono font-bold text-neon-pink">{step}</p>
+          <p className="text-xs text-muted mb-1">Steps / Epochs</p>
+          <p className="text-lg font-mono font-bold text-neon-pink">
+            {history.length - 1}
+          </p>
         </div>
       </div>
 
@@ -201,23 +216,26 @@ export default function GradientDescentSimulator() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setLearningRate((lr) => Math.max(0.01, lr - 0.02))}
-            className="p-1.5 rounded-lg bg-surface-light hover:bg-primary/15 transition-colors"
+            onClick={() => { if (!isRunning) setLearningRate((lr) => Math.max(0.01, lr - 0.05)); setHistory([[3, 3]]); }}
+            disabled={isRunning}
+            className="p-1.5 rounded-lg bg-surface-light hover:bg-primary/15 transition-colors disabled:opacity-50"
           >
             <Minus className="w-3 h-3" />
           </button>
           <input
             type="range"
             min="0.01"
-            max="0.5"
+            max="0.8"
             step="0.01"
             value={learningRate}
-            onChange={(e) => setLearningRate(parseFloat(e.target.value))}
+            disabled={isRunning}
+            onChange={(e) => { setLearningRate(parseFloat(e.target.value)); setHistory([[3, 3]]); }}
             className="flex-1 accent-primary"
           />
           <button
-            onClick={() => setLearningRate((lr) => Math.min(0.5, lr + 0.02))}
-            className="p-1.5 rounded-lg bg-surface-light hover:bg-primary/15 transition-colors"
+            onClick={() => { if (!isRunning) setLearningRate((lr) => Math.min(0.8, lr + 0.05)); setHistory([[3, 3]]); }}
+            disabled={isRunning}
+            className="p-1.5 rounded-lg bg-surface-light hover:bg-primary/15 transition-colors disabled:opacity-50"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -226,21 +244,21 @@ export default function GradientDescentSimulator() {
 
       {/* Controls */}
       <div className="flex gap-3">
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsRunning(!isRunning)}
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-gradient-to-r from-primary to-accent text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-shadow"
+        <button
+          onClick={runDescent}
+          disabled={isRunning || history.length > 1}
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-full bg-gradient-to-r from-primary to-accent text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all disabled:opacity-50 active:scale-95"
         >
           <Play className="w-4 h-4" />
-          {isRunning ? "Pause" : "Run Descent"}
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
+          {isRunning ? "Simulating..." : history.length > 1 ? "Descent Complete" : "Run Descent"}
+        </button>
+        <button
           onClick={reset}
-          className="px-5 py-3 rounded-full bg-surface-light text-muted font-semibold hover:bg-primary/10 transition-colors"
+          disabled={isRunning}
+          className="px-5 py-3 rounded-full glass text-muted font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 active:scale-95"
         >
           <RotateCcw className="w-4 h-4" />
-        </motion.button>
+        </button>
       </div>
     </div>
   );
