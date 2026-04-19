@@ -202,7 +202,6 @@ export default function GradientDescentSimulator() {
   };
 
   const reset = (t: Topography = topo) => {
-    gsap.killTweensOf("*");
     setIsRunning(false);
     setHistory([getStartPos(t)]);
   };
