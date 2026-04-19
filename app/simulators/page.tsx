@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useState, useRef } from "react";
 import { Brain, TrendingDown } from "lucide-react";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import dynamic from "next/dynamic";
 
 const GradientDescentSimulator = dynamic(
@@ -118,6 +119,7 @@ export default function SimulatorsPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }
