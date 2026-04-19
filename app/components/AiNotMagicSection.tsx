@@ -58,7 +58,7 @@ function InteractiveCore() {
 
       {/* Central Processing Core */}
       <Float speed={3} rotationIntensity={2} floatIntensity={1.5}>
-          <Sphere ref={coreRef} args={[1.2, 64, 64]} className="magic-3d-core">
+          <Sphere ref={coreRef} args={[1.2, 64, 64]}>
              <meshPhysicalMaterial 
                color="#030014" 
                emissive="#8b5cf6"
@@ -76,7 +76,7 @@ function InteractiveCore() {
       {/* Neural Particles */}
       <points ref={particlesRef}>
          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" count={particleCount} array={positions} itemSize={3} />
+            <bufferAttribute attach="attributes-position" args={[positions, 3]} />
          </bufferGeometry>
          <pointsMaterial size={0.05} color="#f472b6" transparent opacity={0.6} blending={THREE.AdditiveBlending} />
       </points>

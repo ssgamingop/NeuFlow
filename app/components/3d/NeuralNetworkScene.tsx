@@ -80,6 +80,7 @@ function CurvedConnection({ data }: { data: ConnectionData }) {
 
   return (
     <>
+      {/* @ts-expect-error - React DOM typings incorrectly override R3F line intrinsic */}
       <line ref={lineRef as any} geometry={lineGeometry} material={mat} />
       
       {/* Traveling Data Pulse (Elongated shape to look like a beam) */}
