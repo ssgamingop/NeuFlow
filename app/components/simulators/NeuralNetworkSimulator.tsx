@@ -54,7 +54,7 @@ function NodeMesh({ data, isActive, isBackprop }: { data: NodeData, isActive: bo
 
   return (
     <group position={data.position}>
-        <mesh ref={meshRef} className="nn-node">
+        <mesh ref={meshRef}>
            <sphereGeometry args={[0.2, 16, 16]} />
            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={isActive ? 1.5 : 0.4} />
         </mesh>
@@ -96,6 +96,7 @@ function ConnectionLine({ data, isActive, isBackprop }: { data: ConnectionData, 
 
   return (
     <group>
+      {/* @ts-expect-error - React DOM typings incorrectly override R3F line intrinsic */}
       <line geometry={geom}>
          <lineBasicMaterial color={color} transparent opacity={opacity} linewidth={isActive ? 3 : 1} />
       </line>
@@ -104,7 +105,7 @@ function ConnectionLine({ data, isActive, isBackprop }: { data: ConnectionData, 
       {isActive && (
          <mesh ref={pulseRef}>
             <sphereGeometry args={[0.06, 8, 8]} />
-            <meshBasicMaterial color={color} emissive={color} emissiveIntensity={2} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2} />
          </mesh>
       )}
 
@@ -278,7 +279,7 @@ export default function NeuralNetworkSimulator() {
             prevLayer.forEach(prevNode => {
                 const conn = currentConns.find(c => c.fromId === prevNode.id && c.toId === node.id);
                 if (conn) {
-                    conn.weight -= learningRate * node.delta * prevNode.value;
+                    conn.weight -= learningRate * (node.delta || 0) * prevNode.value;
                 }
             });
          });
