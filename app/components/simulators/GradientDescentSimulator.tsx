@@ -218,7 +218,13 @@ export default function GradientDescentSimulator() {
           <LandscapeSurface type={topo} />
           <AgentBall positionArr={history} type={topo} />
 
-          <OrbitControls enableZoom={false} autoRotate={!isRunning} autoRotateSpeed={0.5} />
+          <OrbitControls 
+            enableZoom={true} 
+            maxDistance={15} 
+            minDistance={2} 
+            autoRotate={!isRunning} 
+            autoRotateSpeed={0.5} 
+          />
         </Canvas>
 
         {/* Overlay Overlay Info */}

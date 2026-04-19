@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Play, RotateCcw, Plus, Minus } from "lucide-react";
+import { Play, RotateCcw, Crosshair } from "lucide-react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Stars, Html, Float } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import gsap from "gsap";
 
 /* ─── Neural Network Core Math ─── */
 function sigmoid(x: number) {
   return 1 / (1 + Math.exp(-x));
+}
+function sigmoidDerivative(x: number) {
+  return x * (1 - x); // Assuming x is already sigmoid activated
 }
 
 interface NodeData {
@@ -19,6 +22,7 @@ interface NodeData {
   position: THREE.Vector3;
   value: number;
   bias: number;
+  delta?: number;
 }
 
 interface ConnectionData {
@@ -32,27 +36,29 @@ interface ConnectionData {
 }
 
 /* ─── 3D Network Components ─── */
-function NodeMesh({ data, isActive }: { data: NodeData, isActive: boolean }) {
+function NodeMesh({ data, isActive, isBackprop }: { data: NodeData, isActive: boolean, isBackprop: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const haloRef = useRef<THREE.Mesh>(null!);
 
   useFrame((state) => {
-     if (isActive && haloRef.current) {
-        haloRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 6) * 0.2);
+     if (haloRef.current) {
+        // Continuous gentle pulse, aggressive when active
+        const intensity = isActive ? 0.2 : 0.05;
+        const speed = isActive ? 6 : 2;
+        haloRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * speed + data.layerIdx) * intensity);
      }
   });
 
-  const color = data.layerIdx === 0 ? "#8b5cf6" : "#06b6d4";
+  // Green color for backprop, Purple/Cyan for forward
+  const color = isBackprop ? "#4ade80" : (data.layerIdx === 0 ? "#8b5cf6" : "#06b6d4");
 
   return (
     <group position={data.position}>
-        {/* Core */}
         <mesh ref={meshRef} className="nn-node">
            <sphereGeometry args={[0.2, 16, 16]} />
            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={isActive ? 1.5 : 0.4} />
         </mesh>
         
-        {/* Halo */}
         <mesh ref={haloRef} visible={isActive}>
             <sphereGeometry args={[0.3, 16, 16]} />
             <meshBasicMaterial color={color} transparent opacity={0.3} />
@@ -60,67 +66,98 @@ function NodeMesh({ data, isActive }: { data: NodeData, isActive: boolean }) {
 
         <Html position={[0, 0.4, 0]} center className="pointer-events-none">
             <div className={`bg-background/80 backdrop-blur-md px-1.5 py-0.5 rounded text-[9px] font-mono whitespace-nowrap transition-all ${isActive ? 'border-primary ring-1 ring-primary shadow-[0_0_10px_rgba(139,92,246,0.5)]' : 'border-white/10'}`}>
-               {data.layerIdx === 0 ? "In" : "Out"}: {data.value.toFixed(2)}
+               {!isBackprop 
+                 ? `${data.layerIdx === 0 ? "In" : "Out"}: ${data.value.toFixed(2)}`
+                 : `δ: ${data.delta?.toFixed(3) || "0.000"} `
+               }
             </div>
         </Html>
     </group>
   );
 }
 
-function ConnectionLine({ data, isActive }: { data: ConnectionData, isActive: boolean }) {
+function ConnectionLine({ data, isActive, isBackprop }: { data: ConnectionData, isActive: boolean, isBackprop: boolean }) {
   const geom = useMemo(() => new THREE.BufferGeometry().setFromPoints([data.start, data.end]), [data.start, data.end]);
+  const pulseRef = useRef<THREE.Mesh>(null!);
   
-  // Color based on weight: Positive=Cyan, Negative=Pink
-  const color = data.weight > 0 ? "#22d3ee" : "#f472b6";
-  const opacity = isActive ? 0.8 : (0.1 + Math.abs(data.weight) * 0.2);
+  useFrame((state) => {
+      if (isActive && pulseRef.current) {
+         // Travelling pulse logic relative to layer and time
+         const t = (state.clock.elapsedTime * 1.5 + data.layer) % 1; 
+         // If backprop, travel backwards!
+         const progress = isBackprop ? (1 - t) : t;
+         pulseRef.current.position.copy(data.start).lerp(data.end, progress);
+      }
+  });
+
+  // Pink negative, Cyan positive. Green during backprop adjustment.
+  const color = isBackprop && isActive ? "#4ade80" : (data.weight > 0 ? "#22d3ee" : "#f472b6");
+  const opacity = isActive ? 1 : Math.max(0.15, Math.abs(data.weight) * 0.5);
 
   return (
-    <line geometry={geom}>
-       <lineBasicMaterial color={color} transparent opacity={opacity} linewidth={isActive ? 3 : 1} />
-    </line>
+    <group>
+      <line geometry={geom}>
+         <lineBasicMaterial color={color} transparent opacity={opacity} linewidth={isActive ? 3 : 1} />
+      </line>
+      
+      {/* Travelling Energy Pulse */}
+      {isActive && (
+         <mesh ref={pulseRef}>
+            <sphereGeometry args={[0.06, 8, 8]} />
+            <meshBasicMaterial color={color} emissive={color} emissiveIntensity={2} />
+         </mesh>
+      )}
+
+      {isBackprop && isActive && (
+          <Html position={data.start.clone().lerp(data.end, 0.5)} center className="pointer-events-none z-50">
+             <div className="bg-green-900/90 text-green-400 border border-green-500/30 px-1 py-0.5 rounded text-[8px] font-bold">
+               Updating Weight
+             </div>
+          </Html>
+      )}
+    </group>
   );
 }
 
-/* ─── Simulator Application ─── */
 export default function NeuralNetworkSimulator() {
   const [layers, setLayers] = useState([2, 3, 2, 1]);
   const [isRunning, setIsRunning] = useState(false);
-  const [input1, setInput1] = useState(0.7);
-  const [input2, setInput2] = useState(0.3);
-  const [output, setOutput] = useState("0.0000");
+  const [isBackpropMode, setIsBackpropMode] = useState(false);
+  
+  const [input1, setInput1] = useState(0.8);
+  const [input2, setInput2] = useState(0.2);
+  const [targetOutput, setTargetOutput] = useState(1.0);
+  
+  const [output, setOutput] = useState("0.000");
+  const [mseLoss, setMseLoss] = useState("0.000");
+  
   const [activeLayer, setActiveLayer] = useState(-1);
 
   // Network State
   const [nodes, setNodes] = useState<NodeData[]>([]);
   const [connections, setConnections] = useState<ConnectionData[]>([]);
   
-  // Track pulses for GSAP animation
-  const pulsesGroupRef = useRef<THREE.Group>(null!);
-
   const buildNetwork = useCallback((i1: number, i2: number, lLayers: number[]) => {
     const newNodes: NodeData[] = [];
     const newConns: ConnectionData[] = [];
     
-    // Z-axis spreading for layers (-4 to 4)
     lLayers.forEach((count, layerIdx) => {
         const z = -4 + (layerIdx / (lLayers.length - 1)) * 8;
         
         for (let i = 0; i < count; i++) {
-           const x = (i - (count - 1) / 2) * 1.5; // Center X
-           const y = 0; // Keeping it mostly flat on Y, or we can use random jitter
-           
+           const x = (i - (count - 1) / 2) * 1.5; 
            newNodes.push({
                id: `${layerIdx}-${i}`,
                layerIdx,
                nodeIdx: i,
-               position: new THREE.Vector3(x, y, z),
+               position: new THREE.Vector3(x, 0, z),
                value: layerIdx === 0 ? (i === 0 ? i1 : i2) : 0,
-               bias: Math.random() * 0.5 - 0.25
+               bias: Math.random() * 0.5 - 0.25,
+               delta: 0
            });
         }
     });
 
-    // Connections
     const getNodesLayers = (idx: number) => newNodes.filter(n => n.layerIdx === idx);
     
     for (let l = 0; l < lLayers.length - 1; l++) {
@@ -149,236 +186,246 @@ export default function NeuralNetworkSimulator() {
     const { n, c } = buildNetwork(input1, input2, layers);
     setNodes(n);
     setConnections(c);
-    setOutput("0.0000"); // Reset output on rebuild
-  }, [layers, input1, input2, buildNetwork]);
+    setOutput("0.000");
+    setMseLoss("0.000");
+  }, [layers, input1, input2, targetOutput, buildNetwork]);
 
-  const runForwardPass = () => {
-      if (isRunning || !pulsesGroupRef.current) return;
+  const runTrainingPass = () => {
+      if (isRunning) return;
       setIsRunning(true);
+      setIsBackpropMode(false);
       setActiveLayer(0);
 
-      // We clone nodes to calculate math sequentially
-      const calculatedNodes = [...nodes.map(n => ({ ...n }))];
-      
-      const tl = gsap.timeline({
-          onComplete: () => {
-             setIsRunning(false);
-             setActiveLayer(-1);
-             const finalNode = calculatedNodes.find(n => n.layerIdx === layers.length - 1);
-             if (finalNode) setOutput(finalNode.value.toFixed(4));
+      // --- Forward Pass Calculation ---
+      let currentNodes = JSON.parse(JSON.stringify(nodes)) as NodeData[];
+      let currentConns = JSON.parse(JSON.stringify(connections)) as ConnectionData[];
+
+      // Re-map Vector3s after JSON stringify
+      currentNodes.forEach(n => n.position = new THREE.Vector3(n.position.x, n.position.y, n.position.z));
+      currentConns.forEach(c => {
+         c.start = new THREE.Vector3(c.start.x, c.start.y, c.start.z);
+         c.end = new THREE.Vector3(c.end.x, c.end.y, c.end.z);
+      });
+
+      for (let l = 1; l < layers.length; l++) {
+          const prevLayer = currentNodes.filter(n => n.layerIdx === l - 1);
+          const currLayer = currentNodes.filter(n => n.layerIdx === l);
+          
+          currLayer.forEach(node => {
+              let sum = node.bias;
+              prevLayer.forEach(prevNode => {
+                  const conn = currentConns.find(c => c.fromId === prevNode.id && c.toId === node.id);
+                  if (conn) sum += prevNode.value * conn.weight;
+              });
+              node.value = sigmoid(sum);
+          });
+      }
+
+      // Calculate the final error
+      const finalOut = currentNodes.filter(n => n.layerIdx === layers.length - 1)[0].value;
+      const error = 0.5 * Math.pow(targetOutput - finalOut, 2);
+
+      // Visual Forward Pass Timeline
+      const tl = gsap.timeline();
+
+      for (let l = 1; l <= layers.length; l++) {
+          tl.to({}, {
+              duration: 0.6,
+              onStart: () => {
+                  setActiveLayer(l);
+                  if (l === layers.length) {
+                      setNodes(currentNodes);
+                      setOutput(finalOut.toFixed(4));
+                      setMseLoss(error.toFixed(4));
+                  }
+              }
+          });
+      }
+
+      // --- Backward Pass Calculation (Backpropagation) ---
+      tl.to({}, {
+          duration: 1.0, // Pause before triggering backprop
+          onStart: () => {
+             setIsBackpropMode(true);
+             setActiveLayer(layers.length - 1);
           }
       });
 
-      for (let l = 0; l < layers.length - 1; l++) {
-         const layerConns = connections.filter(c => c.layer === l);
-         
-         // Mathematical propagation for this layer step
-         layerConns.forEach(conn => {
-             const fromNode = calculatedNodes.find(n => n.id === conn.fromId)!;
-             const toNode = calculatedNodes.find(n => n.id === conn.toId)!;
-             toNode.value += fromNode.value * conn.weight;
-         });
-         
-         // Apply activation (Sigmoid)
-         calculatedNodes.filter(n => n.layerIdx === l + 1).forEach(toNode => {
-             toNode.value = sigmoid(toNode.value + toNode.bias);
+      // Calculate deltas from output to first hidden layer
+      for (let l = layers.length - 1; l > 0; l--) {
+         const currLayer = currentNodes.filter(n => n.layerIdx === l);
+         const prevLayer = currentNodes.filter(n => n.layerIdx === l - 1);
+
+         currLayer.forEach(node => {
+            if (l === layers.length - 1) {
+               // Output node delta
+               node.delta = (node.value - targetOutput) * sigmoidDerivative(node.value);
+            } else {
+               // Hidden node delta
+               let errorSum = 0;
+               const nextLayer = currentNodes.filter(n => n.layerIdx === l + 1);
+               nextLayer.forEach(nextNode => {
+                  const conn = currentConns.find(c => c.fromId === node.id && c.toId === nextNode.id);
+                  if (conn && nextNode.delta !== undefined) {
+                     errorSum += conn.weight * nextNode.delta;
+                  }
+               });
+               node.delta = errorSum * sigmoidDerivative(node.value);
+            }
+
+            // Adjust weights connecting *into* this node
+            const learningRate = 0.5;
+            prevLayer.forEach(prevNode => {
+                const conn = currentConns.find(c => c.fromId === prevNode.id && c.toId === node.id);
+                if (conn) {
+                    conn.weight -= learningRate * node.delta * prevNode.value;
+                }
+            });
          });
 
-         // GSAP Visual Animation for Layer `l`
-         tl.call(() => setActiveLayer(l));
-
-         // Animate glowing spheres along the connections using raw GSAP on mesh positions
-         layerConns.forEach(conn => {
-             // Create a temporary mesh in the scene for the pulse
-             const geometry = new THREE.SphereGeometry(0.08, 8, 8);
-             const material = new THREE.MeshBasicMaterial({ color: "#22d3ee" });
-             const pulseMesh = new THREE.Mesh(geometry, material);
-             pulseMesh.position.copy(conn.start);
-             
-             pulsesGroupRef.current.add(pulseMesh);
-             
-             tl.to(pulseMesh.position, {
-                 x: conn.end.x,
-                 y: conn.end.y,
-                 z: conn.end.z,
-                 duration: 0.6,
-                 ease: "power2.inOut",
-                 onComplete: () => { pulseMesh.parent?.remove(pulseMesh); }
-             }, `<`); // start all pulses of this layer simultaneously
+         // Visual staggering parameter backflow
+         tl.to({}, {
+             duration: 0.8,
+             onStart: () => {
+                 setActiveLayer(l - 1);
+                 setNodes([...currentNodes]);
+                 setConnections([...currentConns]);
+             }
          });
-         
-         // Small delay at node arrival before next layer fires
-         tl.call(() => {
-             setNodes(calculatedNodes.map(n => ({...n}))); // Trigger React UI render for the new values
-         });
-         tl.to({}, { duration: 0.2 }); // tiny stall
       }
-  };
 
-  const addHiddenNeuron = () => {
-    if (isRunning) return;
-    if (layers.length < 5) {
-      setLayers([...layers.slice(0, -1), 2, layers[layers.length - 1]]);
-    } else {
-      const newLayers = [...layers];
-      const midIdx = Math.floor(newLayers.length / 2);
-      if (newLayers[midIdx] < 5) {
-        newLayers[midIdx]++;
-        setLayers(newLayers);
-      }
-    }
-  };
-
-  const removeHiddenNeuron = () => {
-    if (isRunning) return;
-    if (layers.length > 3) {
-      const newLayers = [...layers];
-      const midIdx = Math.floor(newLayers.length / 2);
-      if (newLayers[midIdx] > 1) {
-        newLayers[midIdx]--;
-      } else {
-        newLayers.splice(midIdx, 1);
-      }
-      setLayers(newLayers);
-    }
+      tl.to({}, {
+          duration: 0.5,
+          onComplete: () => {
+              setActiveLayer(-1);
+              setIsRunning(false);
+              setIsBackpropMode(false);
+          }
+      });
   };
 
   return (
     <div className="space-y-6">
       {/* 3D Canvas */}
-      <div className="glass rounded-2xl h-[400px] overflow-hidden relative border border-primary/20">
-         <Canvas camera={{ position: [6, 4, 0], fov: 45 }}>
-            <fog attach="fog" args={["#0a0a1f", 5, 20]} />
-            <ambientLight intensity={0.5} />
-            <directionalLight position={[5, 10, 5]} intensity={1} color="#8b5cf6" />
-            <Stars radius={10} depth={50} count={500} factor={2} fade speed={1} />
-            
-            <group rotation={[0, Math.PI / 2, 0]}>
-                <Float speed={2} floatIntensity={0.5} rotationIntensity={0.1}>
-                    {/* Nodes Loop */}
-                    {nodes.map(node => (
-                        <NodeMesh key={node.id} data={node} isActive={activeLayer === node.layerIdx || activeLayer + 1 === node.layerIdx} />
-                    ))}
-                    
-                    {/* Connections Loop */}
-                    {connections.map(conn => (
-                        <ConnectionLine key={conn.id} data={conn} isActive={activeLayer === conn.layer} />
-                    ))}
-                    
-                    {/* GSAP Pulses Container */}
-                    <group ref={pulsesGroupRef} />
-                </Float>
-            </group>
+      <div className="glass rounded-2xl h-[450px] overflow-hidden relative border border-primary/20">
+        <Canvas camera={{ position: [5, 4, 8], fov: 45 }}>
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[10, 10, 5]} intensity={1} />
+          
+          <group position={[0, -0.5, 0]}>
+              {connections.map((c) => (
+                <ConnectionLine 
+                   key={c.id} 
+                   data={c} 
+                   isActive={!isBackpropMode ? (c.layer === activeLayer - 1) : (c.layer === activeLayer)} 
+                   isBackprop={isBackpropMode} 
+                />
+              ))}
+              
+              {nodes.map((n) => (
+                <NodeMesh 
+                   key={n.id} 
+                   data={n} 
+                   isActive={n.layerIdx === activeLayer} 
+                   isBackprop={isBackpropMode}
+                />
+              ))}
+          </group>
 
-            <OrbitControls autoRotate={!isRunning} autoRotateSpeed={0.5} maxPolarAngle={Math.PI / 2.2} minPolarAngle={Math.PI / 4} enablePan={false} />
-         </Canvas>
+          <OrbitControls 
+            enableZoom={true} 
+            maxDistance={15} 
+            minDistance={2} 
+            autoRotate={!isRunning} 
+            autoRotateSpeed={0.5} 
+          />
+        </Canvas>
 
-         <div className="absolute top-4 left-4 pointer-events-none">
-            <div className="bg-background/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-muted flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-               3D Network Architecture
+        {/* Dynamic State Overlay */}
+        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10 w-48">
+            <div className="glass p-3 rounded-lg border border-white/10 shadow-lg">
+                <div className="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">Target Output</div>
+                <div className="text-xl font-bold font-mono text-neon-pink">{targetOutput.toFixed(2)}</div>
+                
+                <div className="text-[10px] text-muted font-mono uppercase tracking-widest mt-3 mb-1">Network Guess</div>
+                <div className={`text-xl font-bold font-mono transition-colors ${isBackpropMode ? 'text-white' : 'text-primary'}`}>{output}</div>
+                
+                <div className="w-full h-px bg-white/10 my-3" />
+                
+                <div className="text-[10px] text-muted font-mono uppercase tracking-widest flex items-center justify-between mb-1">
+                    MSE Loss 
+                    {isBackpropMode && <span className="text-[9px] text-green-400 animate-pulse">Minimizing...</span>}
+                </div>
+                <div className="text-2xl font-bold font-mono text-accent">{mseLoss}</div>
             </div>
-         </div>
-      </div>
-
-      {/* Input controls */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="glass rounded-xl p-3">
-          <p className="text-xs text-muted mb-2">Input 1</p>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={input1}
-            disabled={isRunning}
-            onChange={(e) => setInput1(parseFloat(e.target.value))}
-            className="w-full accent-primary"
-          />
-          <p className="text-center text-sm font-mono text-primary-light mt-1">
-            {input1.toFixed(2)}
-          </p>
-        </div>
-        <div className="glass rounded-xl p-3">
-          <p className="text-xs text-muted mb-2">Input 2</p>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={input2}
-            disabled={isRunning}
-            onChange={(e) => setInput2(parseFloat(e.target.value))}
-            className="w-full accent-primary"
-          />
-          <p className="text-center text-sm font-mono text-accent-light mt-1">
-            {input2.toFixed(2)}
-          </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="glass rounded-xl p-3 text-center">
-          <p className="text-xs text-muted mb-1">Layers</p>
-          <p className="text-lg font-mono font-bold text-primary-light">
-            {layers.length}
-          </p>
-        </div>
-        <div className="glass rounded-xl p-3 text-center">
-          <p className="text-xs text-muted mb-1">Connections</p>
-          <p className="text-lg font-mono font-bold text-accent-light">
-            {connections.length}
-          </p>
-        </div>
-        <div className="glass rounded-xl p-3 text-center">
-          <p className="text-xs text-muted mb-1">Final Output</p>
-          <p className="text-lg font-mono font-bold text-neon-pink">
-            {output}
-          </p>
-        </div>
-      </div>
+      {/* Control Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-light p-6 rounded-2xl border border-white/5">
+        <div className="space-y-6">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted font-medium">Input 1 Sensor</span>
+                <span className="text-white font-mono">{input1.toFixed(2)}</span>
+              </div>
+              <input type="range" min="0" max="1" step="0.01" value={input1} onChange={(e) => setInput1(parseFloat(e.target.value))} disabled={isRunning} className="w-full accent-primary" />
+            </div>
 
-      {/* Layer controls */}
-      <div className="flex items-center justify-center gap-4">
-        <button
-          onClick={removeHiddenNeuron}
-          disabled={isRunning || layers.length <= 3}
-          className="p-2 rounded-lg bg-surface-light hover:bg-primary/15 transition-colors text-muted disabled:opacity-50"
-        >
-          <Minus className="w-4 h-4" />
-        </button>
-        <span className="text-sm text-muted font-medium">Hidden Structure</span>
-        <button
-          onClick={addHiddenNeuron}
-          disabled={isRunning}
-          className="p-2 rounded-lg bg-surface-light hover:bg-primary/15 transition-colors text-muted disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted font-medium">Input 2 Sensor</span>
+                <span className="text-white font-mono">{input2.toFixed(2)}</span>
+              </div>
+              <input type="range" min="0" max="1" step="0.01" value={input2} onChange={(e) => setInput2(parseFloat(e.target.value))} disabled={isRunning} className="w-full accent-primary" />
+            </div>
 
-      {/* Controls */}
-      <div className="flex gap-3">
-        <button
-          onClick={runForwardPass}
-          disabled={isRunning}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full font-semibold transition-all active:scale-95 ${
-            isRunning
-              ? "bg-surface-light text-muted cursor-not-allowed"
-              : "bg-gradient-to-r from-primary to-accent text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]"
-          }`}
-        >
-          <Play className="w-4 h-4" />
-          {isRunning ? "Calculating..." : "Run Forward Pass"}
-        </button>
-        <button
-          onClick={() => { setOutput("0.0000"); setNodes(buildNetwork(input1, input2, layers).n); }}
-          disabled={isRunning}
-          className="px-5 py-3 rounded-full glass text-muted font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 active:scale-95"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-neon-pink font-bold flex items-center gap-1"><Crosshair className="w-4 h-4"/> Target Requirement</span>
+                <span className="text-white font-mono">{targetOutput.toFixed(2)}</span>
+              </div>
+              <input type="range" min="0" max="1" step="0.01" value={targetOutput} onChange={(e) => setTargetOutput(parseFloat(e.target.value))} disabled={isRunning} className="w-full accent-neon-pink" />
+            </div>
+        </div>
+
+        <div className="space-y-6 flex flex-col justify-between">
+           <div>
+              <h4 className="text-sm font-bold text-white mb-3">Model Architecture</h4>
+              {/* Architecture Editor omitted logic bounds for clarity */}
+              <div className="flex bg-background/50 p-2 rounded-lg justify-between items-center px-4">
+                  <span className="text-xs font-mono text-muted">INPUT</span>
+                  <span className="text-white font-bold">{layers[0]}</span>
+                  <span className="text-xs font-mono text-muted">HIDDEN 1</span>
+                  <span className="text-white font-bold">{layers[1]}</span>
+                  <span className="text-xs font-mono text-muted">HIDDEN 2</span>
+                  <span className="text-white font-bold">{layers[2]}</span>
+                  <span className="text-xs font-mono text-muted">OUT</span>
+                  <span className="text-white font-bold">{layers[3]}</span>
+              </div>
+              <p className="text-[11px] text-muted mt-4 leading-relaxed">
+                  Executing a training pass triggers full <span className="text-accent font-bold">Forward Propagation</span> through the architecture, calculates Mean Squared Error against the Target Output, and subsequently blasts error deltas backwards using <span className="text-green-400 font-bold">Backpropagation</span>, explicitly updating connection weights on the fly!
+              </p>
+           </div>
+           
+           <div className="flex gap-3 mt-auto">
+              <button
+                onClick={runTrainingPass}
+                disabled={isRunning}
+                className="flex-1 bg-gradient-to-r from-primary to-accent text-white py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_4px_20px_rgba(139,92,246,0.3)] pointer-events-auto"
+              >
+                <Play className="w-4 h-4" /> {isRunning ? (isBackpropMode ? "Backpropagating..." : "Forward Pass...") : "Execute Training Pass"}
+              </button>
+              <button
+                onClick={() => setLayers([...layers])} // Force rebuild
+                disabled={isRunning}
+                className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 pointer-events-auto"
+                title="Reset Weights"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+           </div>
+        </div>
       </div>
     </div>
   );
