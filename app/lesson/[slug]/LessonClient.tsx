@@ -130,7 +130,6 @@ export default function LessonClient({ slug }: { slug: string }) {
 
   return (
     <>
-      <Navbar />
       <main className="min-h-screen pt-24 pb-20 relative">
         {/* Deep 3D Ambient Background */}
         <div className="fixed inset-0 -z-10 bg-[#030014]" />
