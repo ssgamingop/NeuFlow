@@ -95,7 +95,7 @@ export default function RoadmapPage() {
             <div className="absolute left-8 md:left-1/2 md:-translate-x-px top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/30 via-accent/20 to-neon-pink/30" />
 
             {lessons.map((lesson, i) => {
-              const completed = isCompleted(lesson.slug);
+              const completed = isMounted && completedLessons.includes(lesson.slug);
               const isEven = i % 2 === 0;
 
               return (
