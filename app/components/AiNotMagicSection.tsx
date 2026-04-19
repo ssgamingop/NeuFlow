@@ -6,7 +6,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Environment, Sphere, Torus, Line } from "@react-three/drei";
+import { Float, Stars } from "@react-three/drei";
 import * as THREE from "three";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -19,69 +19,89 @@ const pipelineSteps = [
   { Icon: Zap, label: "Output", color: "#f472b6", desc: "Generated response" },
 ];
 
-function InteractiveCore() {
-  const coreRef = useRef<THREE.Mesh>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
-  const particlesRef = useRef<THREE.Points>(null);
+function VisualPipelineTower() {
+  const groupRef = useRef<THREE.Group>(null);
 
-  // Scroll synced rotation via useFrame reading the document scroll
-  useFrame((state) => {
-    if (coreRef.current && ringRef.current) {
-        coreRef.current.rotation.y += 0.005;
-        coreRef.current.rotation.x += 0.002;
-        ringRef.current.rotation.x -= 0.01;
-        ringRef.current.rotation.y -= 0.005;
-    }
-    if (particlesRef.current) {
-        particlesRef.current.rotation.y -= 0.001;
+  // Gentle, highly optimized rotation
+  useFrame(() => {
+    if (groupRef.current) {
+        groupRef.current.rotation.y += 0.002;
     }
   });
 
-  const particleCount = 150;
-  const positions = new Float32Array(particleCount * 3);
-  for(let i=0; i<particleCount*3; i++) {
-      positions[i] = (Math.random() - 0.5) * 8;
-  }
-
   return (
-    <group>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[5, 5, 5]} intensity={2} color="#06b6d4" />
-      <directionalLight position={[-5, -5, -5]} intensity={2} color="#8b5cf6" />
+    <group ref={groupRef} position={[0, 0, 0]}>
+      {/* Remove heavy environment maps. Use pure computational basic lights */}
+      <ambientLight intensity={1.5} />
       
-      {/* Outer Data Ring */}
-      <Float speed={2} rotationIntensity={1} floatIntensity={1}>
-         <Torus ref={ringRef} args={[2.5, 0.02, 16, 100]} rotation={[Math.PI/2, 0, 0]}>
-            <meshStandardMaterial color="#22d3ee" emissive="#22d3ee" emissiveIntensity={2} toneMapped={false} />
-         </Torus>
+      {/* Central Logic Beam */}
+      <mesh position={[0, 0, 0]}>
+         <cylinderGeometry args={[0.01, 0.01, 7, 8]} />
+         <meshBasicMaterial color="#ffffff" transparent opacity={0.2} />
+      </mesh>
+
+      {/* Node 1: Input (Diamond/Octahedron) */}
+      <Float speed={2} rotationIntensity={2} floatIntensity={1}>
+        <mesh position={[0, 2.5, 0]}>
+           <octahedronGeometry args={[0.5]} />
+           <meshBasicMaterial color="#8b5cf6" wireframe />
+           <mesh scale={0.98}>
+             <octahedronGeometry args={[0.5]} />
+             <meshBasicMaterial color="#8b5cf6" transparent opacity={0.1} />
+           </mesh>
+        </mesh>
       </Float>
 
-      {/* Central Processing Core */}
-      <Float speed={3} rotationIntensity={2} floatIntensity={1.5}>
-          <Sphere ref={coreRef} args={[1.2, 64, 64]}>
-             <meshPhysicalMaterial 
-               color="#030014" 
-               emissive="#8b5cf6"
-               emissiveIntensity={0.5}
-               roughness={0.1}
-               transmission={0.9} 
-               thickness={2}
-               clearcoat={1}
-               wireframe={true}
-               transparent
-             />
-          </Sphere>
+      {/* Node 2: Tokens (Cubes) */}
+      <Float speed={2.5} rotationIntensity={1.5} floatIntensity={1}>
+        <mesh position={[0, 1.25, 0]}>
+           <boxGeometry args={[0.6, 0.6, 0.6]} />
+           <meshBasicMaterial color="#a78bfa" wireframe />
+           <mesh scale={0.98}>
+             <boxGeometry args={[0.6, 0.6, 0.6]} />
+             <meshBasicMaterial color="#a78bfa" transparent opacity={0.1} />
+           </mesh>
+        </mesh>
       </Float>
 
-      {/* Neural Particles */}
-      <points ref={particlesRef}>
-         <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-         </bufferGeometry>
-         <pointsMaterial size={0.05} color="#f472b6" transparent opacity={0.6} blending={THREE.AdditiveBlending} />
-      </points>
-      
-      <Environment preset="city" />
+      {/* Node 3: Embeddings (Icosahedron) */}
+      <Float speed={1.5} rotationIntensity={3} floatIntensity={1}>
+        <mesh position={[0, 0, 0]}>
+           <icosahedronGeometry args={[0.7]} />
+           <meshBasicMaterial color="#06b6d4" wireframe />
+           <mesh scale={0.98}>
+             <icosahedronGeometry args={[0.7]} />
+             <meshBasicMaterial color="#06b6d4" transparent opacity={0.1} />
+           </mesh>
+        </mesh>
+      </Float>
+
+      {/* Node 4: Attention (Torus Knot) */}
+      <Float speed={3} rotationIntensity={2} floatIntensity={1}>
+        <mesh position={[0, -1.25, 0]}>
+           <torusKnotGeometry args={[0.3, 0.08, 64, 8]} />
+           <meshBasicMaterial color="#22d3ee" wireframe />
+           <mesh scale={0.98}>
+             <torusKnotGeometry args={[0.3, 0.08, 64, 8]} />
+             <meshBasicMaterial color="#22d3ee" transparent opacity={0.1} />
+           </mesh>
+        </mesh>
+      </Float>
+
+      {/* Node 5: Output (Dodecahedron) */}
+      <Float speed={2} rotationIntensity={1.5} floatIntensity={1}>
+        <mesh position={[0, -2.5, 0]}>
+           <dodecahedronGeometry args={[0.6]} />
+           <meshBasicMaterial color="#f472b6" wireframe />
+           <mesh scale={0.98}>
+             <dodecahedronGeometry args={[0.6]} />
+             <meshBasicMaterial color="#f472b6" transparent opacity={0.1} />
+           </mesh>
+        </mesh>
+      </Float>
+
+      {/* Ultra lightweight particle field using native points generation */}
+      <Stars radius={10} depth={20} count={300} factor={4} saturation={0} fade speed={1} />
     </group>
   );
 }
@@ -130,9 +150,9 @@ export default function AiNotMagicSection() {
       <div className="absolute top-1/4 right-0 w-80 h-80 bg-accent/10 rounded-full blur-[120px] pointer-events-none -z-10" />
 
       {/* 3D Canvas Background fixed to this section */}
-      <div className="absolute right-0 top-0 bottom-0 w-full lg:w-1/2 opacity-60 lg:opacity-100 pointer-events-none">
-          <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
-             <InteractiveCore />
+      <div className="absolute right-0 top-0 bottom-0 w-full lg:w-1/2 opacity-80 lg:opacity-100 pointer-events-none">
+          <Canvas camera={{ position: [0, 0, 8], fov: 45 }} gl={{ powerPreference: "high-performance", antialias: false }}>
+             <VisualPipelineTower />
           </Canvas>
       </div>
 

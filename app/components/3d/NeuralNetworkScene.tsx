@@ -76,6 +76,8 @@ function CurvedConnection({ data }: { data: ConnectionData }) {
         const mat = signalRef.current.material as THREE.MeshBasicMaterial;
         mat.opacity = opacity * 0.8;
     }
+  });
+
   const lineObj = useMemo(() => new THREE.Line(lineGeometry, mat), [lineGeometry, mat]);
 
   return (
