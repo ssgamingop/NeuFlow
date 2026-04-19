@@ -1,11 +1,15 @@
 "use client";
 
-import { motion, useScroll, useTransform, useMotionValue, useSpring } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import GlowButton from "./ui/GlowButton";
 import DataFlowCanvas from "./DataFlowCanvas";
 import { Sparkles, ArrowRight } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const NeuralNetworkScene = dynamic(
   () => import("./3d/NeuralNetworkScene"),
@@ -14,28 +18,28 @@ const NeuralNetworkScene = dynamic(
 
 /* ─── Mouse-following cursor glow ─── */
 function CursorGlow() {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const springX = useSpring(x, { stiffness: 50, damping: 20 });
-  const springY = useSpring(y, { stiffness: 50, damping: 20 });
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
-      x.set(e.clientX);
-      y.set(e.clientY);
+      // Use gsap quickTo for ultra-performant cursor following
+      gsap.to(ref.current, {
+        x: e.clientX,
+        y: e.clientY,
+        duration: 0.5,
+        ease: "power2.out",
+      });
     };
     window.addEventListener("mousemove", move);
     return () => window.removeEventListener("mousemove", move);
-  }, [x, y]);
+  }, []);
 
   return (
-    <motion.div
-      className="fixed w-[500px] h-[500px] rounded-full pointer-events-none z-[2]"
+    <div
+      ref={ref}
+      className="fixed top-0 left-0 w-[500px] h-[500px] rounded-full pointer-events-none z-[2]"
       style={{
-        x: springX,
-        y: springY,
-        translateX: "-50%",
-        translateY: "-50%",
+        transform: "translate(-50%, -50%)",
         background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)",
       }}
     />
@@ -67,7 +71,7 @@ function InteractiveTitle() {
     >
       See How{" "}
       <span
-        className="inline-block"
+        className="inline-block relative"
         style={{
           backgroundImage: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, #c084fc, #8b5cf6, #06b6d4, #f472b6)`,
           backgroundClip: "text",
@@ -84,16 +88,32 @@ function InteractiveTitle() {
 
 export default function HeroSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  // Scroll-based parallax: hero zooms out and fades as user scrolls
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
+  useGSAP(() => {
+    // 1. Staggered Entrance Animation
+    const tl = gsap.timeline({ defaults: { ease: "power4.out", duration: 1.2 } });
+    
+    tl.fromTo(".hero-stagger", 
+        { opacity: 0, y: 40 },
+        { opacity: 1, y: 0, stagger: 0.15, delay: 0.2 }
+    );
 
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.85]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, -60]);
+    // 2. Scroll Parallax Effect
+    gsap.to(contentRef.current, {
+        scale: 0.85,
+        opacity: 0,
+        y: -100,
+        ease: "none",
+        scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: true,
+        }
+    });
+
+  }, { scope: sectionRef });
 
   return (
     <section
@@ -125,52 +145,33 @@ export default function HeroSection() {
       <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background via-background/90 to-transparent z-[4]" />
 
       {/* Content — scrolls with parallax */}
-      <motion.div
-        style={{ scale: heroScale, opacity: heroOpacity, y: heroY }}
+      <div
+        ref={contentRef}
         className="relative z-[5] text-center px-6 max-w-4xl mx-auto"
       >
         {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs text-muted mb-8 border border-primary/20"
-        >
+        <div className="hero-stagger inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs text-muted mb-8 border border-primary/20">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
           </span>
           Interactive AI Learning Platform
-        </motion.div>
+        </div>
 
         {/* Interactive title */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.15 }}
-        >
+        <div className="hero-stagger relative">
           <InteractiveTitle />
-        </motion.div>
+        </div>
 
         {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed"
-        >
+        <p className="hero-stagger text-lg sm:text-xl text-muted max-w-2xl mx-auto mb-10 leading-relaxed">
           Learn Artificial Intelligence through immersive visuals, simulations,
           and real-time animations. Stop reading theory —{" "}
           <span className="text-foreground font-medium">start seeing</span>.
-        </motion.p>
+        </p>
 
         {/* CTA Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.45 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
-        >
+        <div className="hero-stagger flex flex-col sm:flex-row items-center justify-center gap-4">
           <GlowButton variant="primary" size="lg" href="/roadmap">
             <Sparkles className="w-4 h-4" />
             Start Learning
@@ -179,28 +180,8 @@ export default function HeroSection() {
             Explore Visuals
             <ArrowRight className="w-4 h-4" />
           </GlowButton>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="mt-16"
-        >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="mx-auto w-6 h-10 rounded-full border-2 border-primary/30 flex items-start justify-center pt-2"
-          >
-            <motion.div
-              animate={{ opacity: [0.3, 1, 0.3], height: [4, 8, 4] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="w-1 rounded-full bg-primary"
-            />
-          </motion.div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </section>
   );
 }
