@@ -31,8 +31,8 @@ NeuFlow requires Node.js (v18+) to run.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/neuflow.git
-cd neuflow
+git clone git@github.com:ssgamingop/NeuFlow.git
+cd NeuFlow
 
 # 2. Install dependencies
 npm install
