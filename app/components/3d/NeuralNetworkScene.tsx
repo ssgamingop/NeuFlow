@@ -80,7 +80,7 @@ function CurvedConnection({ data }: { data: ConnectionData }) {
 
   return (
     <>
-      <line ref={lineRef} geometry={lineGeometry} material={mat} />
+      <line ref={lineRef as any} geometry={lineGeometry} material={mat} />
       
       {/* Traveling Data Pulse (Elongated shape to look like a beam) */}
       <mesh ref={signalRef}>
