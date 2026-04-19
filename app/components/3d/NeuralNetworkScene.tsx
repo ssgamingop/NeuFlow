@@ -76,12 +76,11 @@ function CurvedConnection({ data }: { data: ConnectionData }) {
         const mat = signalRef.current.material as THREE.MeshBasicMaterial;
         mat.opacity = opacity * 0.8;
     }
-  });
+  const lineObj = useMemo(() => new THREE.Line(lineGeometry, mat), [lineGeometry, mat]);
 
   return (
     <>
-      {/* @ts-expect-error - React DOM typings incorrectly override R3F line intrinsic */}
-      <line ref={lineRef as any} geometry={lineGeometry} material={mat} />
+      <primitive object={lineObj} ref={lineRef as any} />
       
       {/* Traveling Data Pulse (Elongated shape to look like a beam) */}
       <mesh ref={signalRef}>
