@@ -7,7 +7,6 @@ import { lessons } from "@/lib/lessons";
 import { useProgressStore } from "@/lib/store";
 import { CheckCircle, Trophy, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import Navbar from "../components/Navbar";
 
 export default function RoadmapPage() {
   const [isMounted, setIsMounted] = useState(false);
@@ -54,7 +53,6 @@ export default function RoadmapPage() {
 
   return (
     <>
-      <Navbar />
       <main ref={pageRef} className="min-h-screen pt-24 pb-20">
         {/* Background */}
         <div className="fixed inset-0 -z-10 hero-bg" />
