@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import Logo from "./ui/Logo";
 
 const navLinks = [
   { href: "/#features", label: "Features" },
@@ -70,14 +71,11 @@ export default function Navbar() {
 
       <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative w-9 h-9">
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary to-accent opacity-80 group-hover:opacity-100 transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(139,92,246,0.5)]" />
-            <div className="absolute inset-[2px] rounded-[6px] bg-background/90 flex items-center justify-center">
-              <span className="text-sm font-bold gradient-text">N</span>
-            </div>
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="relative w-10 h-10 transition-transform duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_15px_rgba(139,92,246,0.6)]">
+             <Logo className="w-full h-full" />
           </div>
-          <span className="text-lg font-bold tracking-tight">
+          <span className="text-xl font-extrabold tracking-tight">
             Neu<span className="gradient-text">Flow</span>
           </span>
         </Link>
