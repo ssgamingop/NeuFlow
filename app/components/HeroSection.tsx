@@ -3,7 +3,6 @@
 import { useRef, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import GlowButton from "./ui/GlowButton";
-import DataFlowCanvas from "./DataFlowCanvas";
 import { Sparkles, ArrowRight } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -129,9 +128,6 @@ export default function HeroSection() {
 
       {/* 3D Neural Network */}
       <NeuralNetworkScene />
-
-      {/* Data flow canvas overlay */}
-      <DataFlowCanvas />
 
       {/* Cursor-following glow */}
       <CursorGlow />

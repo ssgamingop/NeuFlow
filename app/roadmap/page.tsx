@@ -2,7 +2,7 @@
 
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { lessons } from "@/lib/lessons";
 import { useProgressStore } from "@/lib/store";
 import { CheckCircle, Trophy, ArrowRight } from "lucide-react";
@@ -10,10 +10,15 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 
 export default function RoadmapPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const { isCompleted, getProgress, completedLessons } = useProgressStore();
   const progress = getProgress();
   const pageRef = useRef<HTMLElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useGSAP(() => {
     // Header Entrance
@@ -71,8 +76,8 @@ export default function RoadmapPage() {
             {/* Progress bar */}
             <div className="mt-8 max-w-md mx-auto">
               <div className="flex items-center justify-between text-sm text-muted mb-2">
-                <span>{completedLessons.length} of {lessons.length} complete</span>
-                <span className="font-semibold text-primary">{Math.round(progress)}%</span>
+                <span>{isMounted ? completedLessons.length : 0} of {lessons.length} complete</span>
+                <span className="font-semibold text-primary">{isMounted ? Math.round(progress) : 0}%</span>
               </div>
               <div className="h-2 rounded-full bg-surface-light overflow-hidden">
                 <div
