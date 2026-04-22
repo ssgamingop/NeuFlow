@@ -3,7 +3,7 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { useState, useRef } from "react";
-import { Brain, TrendingDown } from "lucide-react";
+import { Brain, TrendingDown, Eye, Sparkles } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const GradientDescentSimulator = dynamic(
@@ -12,6 +12,14 @@ const GradientDescentSimulator = dynamic(
 );
 const NeuralNetworkSimulator = dynamic(
   () => import("../components/simulators/NeuralNetworkSimulator"),
+  { ssr: false }
+);
+const CNNSimulator = dynamic(
+  () => import("../components/simulators/CNNSimulator"),
+  { ssr: false }
+);
+const AttentionSimulator = dynamic(
+  () => import("../components/simulators/AttentionSimulator"),
   { ssr: false }
 );
 
@@ -31,6 +39,22 @@ const tabs = [
     color: "#8b5cf6",
     description:
       "Watch data flow through a 3D neural network. Adjust inputs, add hidden neurons, and observe forward propagation step by step.",
+  },
+  {
+    id: "cnn",
+    label: "CNN Vision",
+    Icon: Eye,
+    color: "#f472b6",
+    description:
+      "Draw on a pixel grid and watch a convolutional filter scan across it, computing dot products to build feature maps — how computers actually see.",
+  },
+  {
+    id: "attention",
+    label: "Attention (LLM)",
+    Icon: Sparkles,
+    color: "#4ade80",
+    description:
+      "Type a sentence and watch the Transformer self-attention mechanism compute Query, Key, Value projections and attention weights — the core of GPT and modern LLMs.",
   },
 ];
 
@@ -60,6 +84,21 @@ export default function SimulatorsPage() {
       );
   }, { dependencies: [activeTab], scope: containerRef });
 
+  const renderSimulator = () => {
+    switch (activeTab) {
+      case "gradient-descent":
+        return <GradientDescentSimulator />;
+      case "neural-network":
+        return <NeuralNetworkSimulator />;
+      case "cnn":
+        return <CNNSimulator />;
+      case "attention":
+        return <AttentionSimulator />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <main ref={pageRef} className="min-h-screen pt-24 pb-20">
@@ -67,7 +106,7 @@ export default function SimulatorsPage() {
         <div className="fixed inset-0 -z-10 hero-bg" />
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,_rgba(139,92,246,0.06)_0%,_transparent_60%)]" />
 
-        <div className="max-w-4xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-6">
           {/* Header */}
           <div className="sim-header text-center mb-12 opacity-0">
             <span className="text-sm text-neon-pink font-medium tracking-widest uppercase mb-4 block">
@@ -82,19 +121,19 @@ export default function SimulatorsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-3 mb-8 justify-center">
+          <div className="flex gap-2 mb-8 justify-center flex-wrap">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`sim-tab opacity-0 flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 active:scale-95 ${
+                className={`sim-tab opacity-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 active:scale-95 ${
                   activeTab === tab.id
                     ? "bg-primary/15 text-primary-light border border-primary/30 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
                     : "text-muted hover:text-foreground hover:bg-surface-light border border-transparent"
                 }`}
               >
                 <tab.Icon className="w-4 h-4" />
-                {tab.label}
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -107,11 +146,7 @@ export default function SimulatorsPage() {
 
               {/* Simulator */}
               <div className="sim-content opacity-0">
-                {activeTab === "gradient-descent" ? (
-                  <GradientDescentSimulator />
-                ) : (
-                  <NeuralNetworkSimulator />
-                )}
+                {renderSimulator()}
               </div>
           </div>
         </div>
