@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
@@ -60,7 +60,7 @@ const treeData: TreeNode = {
 };
 
 function renderTree(node: TreeNode, activeId: string, setActiveId: (id: string) => void) {
-  const elements: JSX.Element[] = [];
+  const elements: React.ReactNode[] = [];
 
   const isActive = activeId === node.id;
   const nodeColor = node.isLeaf ? (node.color || "#ffffff") : (isActive ? "#8b5cf6" : "#0f0f2e");
