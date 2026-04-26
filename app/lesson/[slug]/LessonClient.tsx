@@ -15,6 +15,10 @@ const ScatterPlot3D = dynamic(() => import("@/app/components/visualizers/Scatter
 const SingleNeuron3D = dynamic(() => import("@/app/components/visualizers/SingleNeuron3D"), { ssr: false });
 const GradientSurface3D = dynamic(() => import("@/app/components/visualizers/GradientSurface3D"), { ssr: false });
 const WordEmbeddings3D = dynamic(() => import("@/app/components/visualizers/WordEmbeddings3D"), { ssr: false });
+const ActivationFunctions3D = dynamic(() => import("@/app/components/visualizers/ActivationFunctions3D"), { ssr: false });
+const DecisionTree3D = dynamic(() => import("@/app/components/visualizers/DecisionTree3D"), { ssr: false });
+const RegressionLine3D = dynamic(() => import("@/app/components/visualizers/RegressionLine3D"), { ssr: false });
+const ConfusionMatrix3D = dynamic(() => import("@/app/components/visualizers/ConfusionMatrix3D"), { ssr: false });
 
 function VisualizerRenderer({ section, showQuiz }: { section: any, showQuiz: boolean }) {
   if (showQuiz) {
@@ -35,6 +39,10 @@ function VisualizerRenderer({ section, showQuiz }: { section: any, showQuiz: boo
       case "SingleNeuron3D": return <SingleNeuron3D />;
       case "GradientSurface3D": return <GradientSurface3D />;
       case "WordEmbeddings3D": return <WordEmbeddings3D />;
+      case "ActivationFunctions3D": return <ActivationFunctions3D />;
+      case "DecisionTree3D": return <DecisionTree3D />;
+      case "RegressionLine3D": return <RegressionLine3D />;
+      case "ConfusionMatrix3D": return <ConfusionMatrix3D />;
       default: return <div className="w-full h-full flex items-center justify-center">3D component not found</div>;
     }
   }
