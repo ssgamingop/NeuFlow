@@ -135,7 +135,7 @@ export default function DecisionTree3D() {
           {renderTree(treeData, activeId, setActiveId)}
         </group>
         
-        <OrbitControls enableZoom={true} maxDistance={12} minDistance={4} autoRotate={true} autoRotateSpeed={0.5} />
+        <OrbitControls enableZoom={false} maxDistance={12} minDistance={4} autoRotate={true} autoRotateSpeed={0.5} />
       </Canvas>
     </div>
   );
