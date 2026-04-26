@@ -57,14 +57,14 @@ export default function LearningPathSection() {
             The Complete <span className="gradient-text drop-shadow-[0_0_15px_rgba(139,92,246,0.3)]">Curriculum</span>
           </h2>
           <p className="text-lg text-muted max-w-2xl mx-auto leading-relaxed">
-            Follow our mathematically structured 8-module pathway. Transition seamlessly from absolute beginner concepts to cutting-edge Generative AI development architectures.
+            Follow our mathematically structured 5-module pathway. Transition seamlessly from absolute beginner concepts to cutting-edge Generative AI development architectures.
           </p>
         </div>
 
         {/* Modern Interactive Grid Pathway */}
         <div className="path-grid-container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
           
-          {lessons.map((lesson, i) => (
+          {lessons.slice(0, 8).map((lesson, i) => (
             <div key={lesson.slug} className="modern-path-node opacity-20 transform scale-90 relative group h-full">
               {/* Connector lines (Desktop) */}
               {i % 4 !== 3 && <div className="hidden lg:block absolute top-1/2 -right-6 w-6 h-[2px] bg-white/5 z-0" />}
