@@ -334,7 +334,7 @@ export default function NeuralNetworkSimulator() {
           </group>
 
           <OrbitControls 
-            enableZoom={true} 
+            enableZoom={false} 
             maxDistance={15} 
             minDistance={2} 
             autoRotate={!isRunning} 
