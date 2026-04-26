@@ -11,7 +11,6 @@ const navLinks = [
   { href: "/#features", label: "Features" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/simulators", label: "Simulators" },
-  { href: "/lesson/what-is-ai", label: "Lessons" },
 ];
 
 export default function Navbar() {
@@ -83,14 +82,14 @@ export default function Navbar() {
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               className="text-sm text-muted hover:text-foreground transition-colors duration-200 relative group py-1"
             >
               {link.label}
               <span className="absolute -bottom-0.5 left-0 w-0 h-[2px] bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all duration-300" />
-            </a>
+            </Link>
           ))}
           <Link
             href="/lesson/what-is-ai"
@@ -123,14 +122,14 @@ export default function Navbar() {
           >
             <div className="flex flex-col gap-4 px-6 py-6">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
                   className="text-base text-muted hover:text-foreground transition-colors"
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
               <Link
                 href="/lesson/what-is-ai"
