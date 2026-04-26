@@ -95,14 +95,32 @@ export default function RoadmapPage() {
             {lessons.map((lesson, i) => {
               const completed = isMounted && completedLessons.includes(lesson.slug);
               const isEven = i % 2 === 0;
+              const isFirstInModule = i === 0 || lessons[i - 1].module !== lesson.module;
+              
+              let moduleTitle = "";
+              if (isFirstInModule) {
+                if (lesson.module === 1) moduleTitle = "Module 1: Foundations";
+                if (lesson.module === 2) moduleTitle = "Module 2: Core Machine Learning";
+                if (lesson.module === 3) moduleTitle = "Module 3: Deep Learning";
+                if (lesson.module === 4) moduleTitle = "Module 4: Modern Architectures";
+                if (lesson.module === 5) moduleTitle = "Module 5: Generative AI & Beyond";
+              }
 
               return (
-                <div
-                  key={lesson.slug}
-                  className={`roadmap-node opacity-0 relative flex items-center mb-12 ${
-                    isEven ? "md:flex-row" : "md:flex-row-reverse"
-                  }`}
-                >
+                <div key={lesson.slug}>
+                  {isFirstInModule && (
+                    <div className="roadmap-node opacity-0 relative flex items-center justify-center mb-12 mt-4 z-20">
+                      <div className="glass px-6 py-3 rounded-full border border-primary/20 shadow-lg text-primary-light font-bold text-xs md:text-sm tracking-widest uppercase bg-surface/80 backdrop-blur-md">
+                        {moduleTitle}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div
+                    className={`roadmap-node opacity-0 relative flex items-center mb-12 ${
+                      isEven ? "md:flex-row" : "md:flex-row-reverse"
+                    }`}
+                  >
                   {/* Node dot on the line */}
                   <div className="absolute left-8 md:left-1/2 -translate-x-1/2 z-10">
                     <div
@@ -190,6 +208,7 @@ export default function RoadmapPage() {
                         </div>
                       </div>
                     </Link>
+                  </div>
                   </div>
                 </div>
               );
