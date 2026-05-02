@@ -209,7 +209,7 @@ export default function GradientDescentSimulator() {
   return (
     <div className="space-y-6">
       {/* 3D Visualizer Canvas */}
-      <div className="glass rounded-2xl h-[400px] overflow-hidden relative border border-primary/20">
+      <div className="sim-stage rounded-2xl h-[400px] overflow-hidden relative">
         <Canvas camera={{ position: [6, 4, 6], fov: 45 }}>
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 10, 5]} intensity={1} />
@@ -240,11 +240,11 @@ export default function GradientDescentSimulator() {
       </div>
 
       {/* Control Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-light p-6 rounded-2xl border border-white/5">
+      <div className="sim-control-panel grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl">
         
         <div className="space-y-6">
             <div>
-              <h4 className="text-sm font-bold text-white mb-3">Topography Challenge</h4>
+              <h4 className="sim-section-title mb-3">Topography Challenge</h4>
               <div className="flex bg-background/50 p-1 rounded-lg">
                 {(["bowl", "hills", "saddle"] as Topography[]).map((t) => (
                   <button
@@ -281,7 +281,7 @@ export default function GradientDescentSimulator() {
 
         <div className="space-y-6 flex flex-col justify-between">
            <div>
-              <h4 className="text-sm font-bold text-white mb-3">Physics Engine</h4>
+              <h4 className="sim-section-title mb-3">Physics Engine</h4>
               <button 
                   disabled={isRunning}
                   onClick={() => setUseMomentum(!useMomentum)}
@@ -292,8 +292,8 @@ export default function GradientDescentSimulator() {
                   <Activity className="w-4 h-4" />
                   Apply Momentum Velocity
               </button>
-              <p className="text-[11px] text-muted mt-2 leading-relaxed">
-                  Momentum algorithms (like Adam) build velocity as they roll downhill, allowing them to explicitly smash through local minima traps to find the global bottom. Note how "Hills" traps standard SGD forever.
+              <p className="sim-note mt-2">
+                  Momentum builds velocity as it moves downhill, which helps the optimizer escape shallow local traps. Compare it with standard SGD on the hills landscape.
               </p>
            </div>
            
@@ -308,7 +308,7 @@ export default function GradientDescentSimulator() {
               <button
                 onClick={() => reset(topo)}
                 disabled={isRunning}
-                className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 pointer-events-auto"
+                className="sim-icon-button py-3 px-4 rounded-xl disabled:opacity-50 pointer-events-auto"
                 title="Reset Position"
               >
                 <RotateCcw className="w-4 h-4" />
