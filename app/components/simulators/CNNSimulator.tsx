@@ -289,10 +289,7 @@ export default function CNNSimulator() {
   return (
     <div className="space-y-6" ref={containerRef}>
       {/* Main Visual Area */}
-      <div className="glass rounded-2xl p-6 md:p-8 border border-primary/20 relative overflow-hidden">
-        {/* Ambient subtle background glow */}
-        <div className="absolute top-0 right-0 w-60 h-60 rounded-full blur-[100px] pointer-events-none" style={{ background: `${kernel.color}15` }} />
-
+      <div className="sim-stage rounded-2xl p-5 md:p-6 relative overflow-hidden">
         {/* Pipeline Label */}
         <div className="flex items-center gap-3 mb-6">
           <div className="h-1 flex-1 rounded-full overflow-hidden bg-surface-light">
@@ -491,11 +488,11 @@ export default function CNNSimulator() {
       </div>
 
       {/* Control Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-light p-6 rounded-2xl border border-white/5">
+      <div className="sim-control-panel grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl">
         {/* Left: Filter Select + Presets */}
         <div className="space-y-5">
           <div>
-            <h4 className="text-sm font-bold text-white mb-3">Convolution Filter</h4>
+            <h4 className="sim-section-title mb-3">Convolution Filter</h4>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(KERNELS).map(([key, k]) => (
                 <button
@@ -521,11 +518,11 @@ export default function CNNSimulator() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-muted mt-3 leading-relaxed">{kernel.description}</p>
+            <p className="sim-note mt-3">{kernel.description}</p>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-white mb-3">Digit Presets</h4>
+            <h4 className="sim-section-title mb-3">Digit Presets</h4>
             <div className="flex gap-2">
               {Object.keys(PRESETS).map((name) => (
                 <button
@@ -544,8 +541,8 @@ export default function CNNSimulator() {
         {/* Right: Controls + Info */}
         <div className="space-y-5 flex flex-col justify-between">
           <div>
-            <h4 className="text-sm font-bold text-white mb-3">How It Works</h4>
-            <p className="text-[11px] text-muted leading-relaxed">
+            <h4 className="sim-section-title mb-3">How It Works</h4>
+            <p className="sim-note">
               A <span className="font-bold" style={{ color: kernel.color }}>Convolutional Neural Network</span> scans the input image with a small filter (kernel), computing a <span className="text-accent font-bold">dot product</span> at each position. The resulting <span className="text-white font-semibold">Feature Map</span> highlights specific patterns (edges, textures). <span className="text-accent font-bold">Max Pooling</span> then downsamples, keeping only the strongest activations — making the representation compact and translation-invariant.
             </p>
           </div>
@@ -561,7 +558,7 @@ export default function CNNSimulator() {
             {isRunning && (
               <button
                 onClick={togglePause}
-                className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors"
+                className="sim-icon-button py-3 px-4 rounded-xl"
                 title={isPaused ? "Resume" : "Pause"}
               >
                 {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -570,7 +567,7 @@ export default function CNNSimulator() {
             {isPaused && (
               <button
                 onClick={stepForward}
-                className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors"
+                className="sim-icon-button py-3 px-4 rounded-xl"
                 title="Step Forward"
               >
                 <SkipForward className="w-4 h-4" />
@@ -579,7 +576,7 @@ export default function CNNSimulator() {
             <button
               onClick={() => { resetAnimation(); }}
               disabled={!isRunning && !outputGrid}
-              className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
+              className="sim-icon-button py-3 px-4 rounded-xl disabled:opacity-50"
               title="Reset"
             >
               <RotateCcw className="w-4 h-4" />
