@@ -395,14 +395,14 @@ export default function AttentionSimulator() {
         {/* Matrix displays */}
         <div className="space-y-6">
           {/* Embeddings */}
-          <MatrixGrid data={embeddings} label={`Embeddings (${tokens.length}×${D_MODEL})`} color="#a78bfa" compact />
+          <MatrixGrid data={embeddings} label={`Embeddings (${tokens.length}×${D_MODEL})`} color="#a78bfa" compact highlightRow={highlightRow} />
 
           {/* Q, K, V in a row */}
           {(queryMatrix || keyMatrix || valueMatrix) && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <MatrixGrid data={queryMatrix} label="Query (Q)" color="#8b5cf6" compact />
-              <MatrixGrid data={keyMatrix} label="Key (K)" color="#22d3ee" compact />
-              <MatrixGrid data={valueMatrix} label="Value (V)" color="#f472b6" compact />
+              <MatrixGrid data={queryMatrix} label="Query (Q)" color="#8b5cf6" compact highlightRow={highlightRow} />
+              <MatrixGrid data={keyMatrix} label="Key (K)" color="#22d3ee" compact highlightRow={highlightRow} />
+              <MatrixGrid data={valueMatrix} label="Value (V)" color="#f472b6" compact highlightRow={highlightRow} />
             </div>
           )}
 
@@ -415,6 +415,7 @@ export default function AttentionSimulator() {
                 color="#8b5cf6"
                 tokens={tokens}
                 showRowHighlight={phase === "scores"}
+                highlightRow={highlightRow}
               />
               <MatrixGrid
                 data={attentionWeights}
@@ -423,12 +424,13 @@ export default function AttentionSimulator() {
                 tokens={tokens}
                 isProbability
                 showRowHighlight={phase === "softmax"}
+                highlightRow={highlightRow}
               />
             </div>
           )}
 
           {/* Output */}
-          <MatrixGrid data={outputMatrix} label={`Output: Attention × V (${tokens.length}×${D_MODEL})`} color="#4ade80" compact />
+          <MatrixGrid data={outputMatrix} label={`Output: Attention × V (${tokens.length}×${D_MODEL})`} color="#4ade80" compact highlightRow={highlightRow} />
         </div>
       </div>
 
