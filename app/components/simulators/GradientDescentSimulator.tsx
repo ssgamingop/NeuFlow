@@ -150,6 +150,11 @@ export default function GradientDescentSimulator() {
 
   const [history, setHistory] = useState<[number, number][]>([getStartPos("hills")]);
 
+  function reset(t: Topography = topo) {
+    setIsRunning(false);
+    setHistory([getStartPos(t)]);
+  }
+
   useEffect(() => {
       reset(topo);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,11 +204,6 @@ export default function GradientDescentSimulator() {
     setTimeout(() => {
         setIsRunning(false);
     }, Math.min(tempHistory.length * 0.05, 5) * 1000 + 500);
-  };
-
-  const reset = (t: Topography = topo) => {
-    setIsRunning(false);
-    setHistory([getStartPos(t)]);
   };
 
   return (
