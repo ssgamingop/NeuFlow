@@ -342,9 +342,7 @@ export default function AttentionSimulator() {
   return (
     <div className="space-y-6" ref={containerRef}>
       {/* Main Visual Area */}
-      <div className="glass rounded-2xl p-6 md:p-8 border border-primary/20 relative overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full blur-[100px] pointer-events-none bg-accent/5" />
-
+      <div className="sim-stage rounded-2xl p-5 md:p-6 relative overflow-hidden">
         {/* Phase indicator */}
         <div className="flex items-center gap-3 mb-6">
           <div className="flex gap-1.5">
@@ -431,11 +429,11 @@ export default function AttentionSimulator() {
       </div>
 
       {/* Control Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-light p-6 rounded-2xl border border-white/5">
+      <div className="sim-control-panel grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl">
         {/* Left */}
         <div className="space-y-5">
           <div>
-            <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <h4 className="sim-section-title mb-3 flex items-center gap-2">
               <Type className="w-4 h-4 text-primary" /> Input Sentence
             </h4>
             <input
@@ -449,7 +447,7 @@ export default function AttentionSimulator() {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-white mb-2">Preset Sentences</h4>
+            <h4 className="sim-section-title mb-2">Preset Sentences</h4>
             <div className="flex flex-wrap gap-2">
               {PRESET_SENTENCES.map((s, i) => (
                 <button
@@ -488,11 +486,11 @@ export default function AttentionSimulator() {
         {/* Right */}
         <div className="space-y-5 flex flex-col justify-between">
           <div>
-            <h4 className="text-sm font-bold text-white mb-3">The Attention Mechanism</h4>
-            <p className="text-[11px] text-muted leading-relaxed">
+            <h4 className="sim-section-title mb-3">The Attention Mechanism</h4>
+            <p className="sim-note">
               Every word in a sentence needs context from other words. <span className="text-primary-light font-bold">Self-Attention</span> achieves this through three projections: <span className="text-primary font-bold">Query</span> (what am I looking for?), <span className="text-accent font-bold">Key</span> (what do I contain?), and <span className="text-neon-pink font-bold">Value</span> (what information do I carry?).
             </p>
-            <p className="text-[11px] text-muted leading-relaxed mt-2">
+            <p className="sim-note mt-2">
               The <span className="text-white font-semibold">attention score</span> is computed as <code className="text-accent text-[10px]">Q · Kᵀ / √d</code>, then <span className="text-accent font-bold">Softmax</span> converts these into probabilities. The final output is a weighted sum of Values — each word&apos;s representation is now enriched with context from the entire sentence.
             </p>
           </div>
@@ -508,7 +506,7 @@ export default function AttentionSimulator() {
             <button
               onClick={resetAll}
               disabled={phase === "idle"}
-              className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50"
+              className="sim-icon-button py-3 px-4 rounded-xl disabled:opacity-50"
               title="Reset"
             >
               <RotateCcw className="w-4 h-4" />
