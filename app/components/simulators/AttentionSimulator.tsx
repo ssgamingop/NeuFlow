@@ -84,6 +84,98 @@ const PRESET_SENTENCES = [
 ];
 
 const D_MODEL = 4; // embedding dimension (small for visualization)
+type MatrixData = (number | null)[][];
+
+// Color helper for heatmap cells
+const heatColor = (val: number | null, isProbability: boolean = false): string => {
+  if (val === null) return "#0a0a1f";
+  if (isProbability) {
+    const intensity = Math.round(val * 255);
+    return `rgb(${Math.round(intensity * 0.08)}, ${Math.round(intensity * 0.83)}, ${Math.round(intensity * 0.93)})`;
+  }
+  const norm = Math.max(-1, Math.min(1, val));
+  if (norm >= 0) {
+    const intensity = norm;
+    return `rgba(34, 211, 238, ${intensity * 0.8 + 0.1})`;
+  }
+  const intensity = -norm;
+  return `rgba(244, 114, 182, ${intensity * 0.8 + 0.1})`;
+};
+
+const textColorForHeat = (val: number | null, isProbability: boolean = false): string => {
+  if (val === null) return "#334155";
+  if (isProbability) return val > 0.4 ? "#000" : "#22d3ee";
+  return Math.abs(val) > 0.5 ? "#fff" : "#94a3b8";
+};
+
+function MatrixGrid({
+  data,
+  label,
+  color,
+  tokens: headerTokens,
+  isProbability,
+  showRowHighlight,
+  compact,
+  highlightRow,
+}: {
+  data: MatrixData | null;
+  label: string;
+  color: string;
+  tokens?: string[];
+  isProbability?: boolean;
+  showRowHighlight?: boolean;
+  compact?: boolean;
+  highlightRow: number;
+}) {
+  if (!data) return null;
+  const cellSize = compact ? "w-11 h-7" : "w-12 h-8";
+  return (
+    <div className="matrix-reveal">
+      <div className="text-[10px] font-mono text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+        {label}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="border-collapse">
+          {headerTokens && (
+            <thead>
+              <tr>
+                <th className="p-0.5" />
+                {headerTokens.map((t, i) => (
+                  <th key={i} className="p-0.5 text-[9px] font-mono text-muted text-center max-w-[50px] truncate">{t}</th>
+                ))}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {data.map((row, ri) => (
+              <tr key={ri} className={showRowHighlight && ri === highlightRow ? "ring-1 ring-accent" : ""}>
+                {headerTokens && (
+                  <td className="pr-1.5 text-[9px] font-mono text-muted text-right max-w-[50px] truncate">{headerTokens[ri]}</td>
+                )}
+                {row.map((val, ci) => (
+                  <td key={ci} className="p-0.5">
+                    <div
+                      className={`${cellSize} rounded-[3px] flex items-center justify-center text-[9px] font-mono font-medium transition-all duration-300`}
+                      style={{
+                        background: heatColor(val, isProbability),
+                        color: textColorForHeat(val, isProbability),
+                        boxShadow: (showRowHighlight && ri === highlightRow && val !== null) ? `0 0 8px ${color}50` : "none",
+                        border: `1px solid ${val !== null ? `${color}20` : "rgba(255,255,255,0.03)"}`,
+                      }}
+                    >
+                      {val !== null ? val.toFixed(2) : ""}
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function AttentionSimulator() {
   const [sentence, setSentence] = useState("The cat sat on mat");
@@ -97,13 +189,12 @@ export default function AttentionSimulator() {
   const [queryMatrix, setQueryMatrix] = useState<number[][] | null>(null);
   const [keyMatrix, setKeyMatrix] = useState<number[][] | null>(null);
   const [valueMatrix, setValueMatrix] = useState<number[][] | null>(null);
-  const [attentionScores, setAttentionScores] = useState<number[][] | null>(null);
-  const [attentionWeights, setAttentionWeights] = useState<number[][] | null>(null);
+  const [attentionScores, setAttentionScores] = useState<MatrixData | null>(null);
+  const [attentionWeights, setAttentionWeights] = useState<MatrixData | null>(null);
   const [outputMatrix, setOutputMatrix] = useState<number[][] | null>(null);
 
   // Animation highlight
   const [highlightRow, setHighlightRow] = useState<number>(-1);
-  const [highlightCol, setHighlightCol] = useState<number>(-1);
 
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +217,6 @@ export default function AttentionSimulator() {
     setAttentionWeights(null);
     setOutputMatrix(null);
     setHighlightRow(-1);
-    setHighlightCol(-1);
   }, []);
 
   const runAttention = useCallback(() => {
@@ -158,7 +248,6 @@ export default function AttentionSimulator() {
       onComplete: () => {
         setPhase("done");
         setHighlightRow(-1);
-        setHighlightCol(-1);
         setTimeout(() => setIsRunning(false), 500);
       },
     });
@@ -208,7 +297,7 @@ export default function AttentionSimulator() {
           setHighlightRow(i);
           // Reveal scores row by row
           setAttentionScores(prev => {
-            const current = prev ? prev.map(r => [...r]) : Array.from({ length: n }, () => Array(n).fill(null));
+            const current: MatrixData = prev ? prev.map(r => [...r]) : Array.from({ length: n }, () => Array(n).fill(null));
             current[i] = scaledScores[i];
             return current;
           });
@@ -230,7 +319,7 @@ export default function AttentionSimulator() {
         onStart: () => {
           setHighlightRow(i);
           setAttentionWeights(prev => {
-            const current = prev ? prev.map(r => [...r]) : Array.from({ length: n }, () => Array(n).fill(null));
+            const current: MatrixData = prev ? prev.map(r => [...r]) : Array.from({ length: n }, () => Array(n).fill(null));
             current[i] = weights[i];
             return current;
           });
@@ -253,91 +342,6 @@ export default function AttentionSimulator() {
   useEffect(() => {
     return () => { if (tlRef.current) tlRef.current.kill(); };
   }, []);
-
-  // Color helper for heatmap cells
-  const heatColor = (val: number | null, isProbability: boolean = false): string => {
-    if (val === null) return "#0a0a1f";
-    if (isProbability) {
-      // 0 = dark, 1 = bright cyan
-      const intensity = Math.round(val * 255);
-      return `rgb(${Math.round(intensity * 0.08)}, ${Math.round(intensity * 0.83)}, ${Math.round(intensity * 0.93)})`;
-    }
-    // Diverging: negative = pink, positive = cyan
-    const norm = Math.max(-1, Math.min(1, val));
-    if (norm >= 0) {
-      const intensity = norm;
-      return `rgba(34, 211, 238, ${intensity * 0.8 + 0.1})`;
-    } else {
-      const intensity = -norm;
-      return `rgba(244, 114, 182, ${intensity * 0.8 + 0.1})`;
-    }
-  };
-
-  const textColorForHeat = (val: number | null, isProbability: boolean = false): string => {
-    if (val === null) return "#334155";
-    if (isProbability) return val > 0.4 ? "#000" : "#22d3ee";
-    return Math.abs(val) > 0.5 ? "#fff" : "#94a3b8";
-  };
-
-  // Generic matrix grid renderer
-  const MatrixGrid = ({ data, label, color, tokens: headerTokens, isProbability, showRowHighlight, compact }: {
-    data: number[][] | null;
-    label: string;
-    color: string;
-    tokens?: string[];
-    isProbability?: boolean;
-    showRowHighlight?: boolean;
-    compact?: boolean;
-  }) => {
-    if (!data) return null;
-    const cellSize = compact ? "w-11 h-7" : "w-12 h-8";
-    return (
-      <div className="matrix-reveal">
-        <div className="text-[10px] font-mono text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-          {label}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="border-collapse">
-            {headerTokens && (
-              <thead>
-                <tr>
-                  <th className="p-0.5" />
-                  {headerTokens.map((t, i) => (
-                    <th key={i} className="p-0.5 text-[9px] font-mono text-muted text-center max-w-[50px] truncate">{t}</th>
-                  ))}
-                </tr>
-              </thead>
-            )}
-            <tbody>
-              {data.map((row, ri) => (
-                <tr key={ri} className={showRowHighlight && ri === highlightRow ? "ring-1 ring-accent" : ""}>
-                  {headerTokens && (
-                    <td className="pr-1.5 text-[9px] font-mono text-muted text-right max-w-[50px] truncate">{headerTokens[ri]}</td>
-                  )}
-                  {row.map((val, ci) => (
-                    <td key={ci} className="p-0.5">
-                      <div
-                        className={`${cellSize} rounded-[3px] flex items-center justify-center text-[9px] font-mono font-medium transition-all duration-300`}
-                        style={{
-                          background: heatColor(val, isProbability),
-                          color: textColorForHeat(val, isProbability),
-                          boxShadow: (showRowHighlight && ri === highlightRow && val !== null) ? `0 0 8px ${color}50` : "none",
-                          border: `1px solid ${val !== null ? `${color}20` : "rgba(255,255,255,0.03)"}`,
-                        }}
-                      >
-                        {val !== null ? val.toFixed(2) : ""}
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6" ref={containerRef}>
