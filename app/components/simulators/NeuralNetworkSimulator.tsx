@@ -308,7 +308,7 @@ export default function NeuralNetworkSimulator() {
   return (
     <div className="space-y-6">
       {/* 3D Canvas */}
-      <div className="glass rounded-2xl h-[450px] overflow-hidden relative border border-primary/20">
+      <div className="sim-stage rounded-2xl h-[450px] overflow-hidden relative">
         <Canvas camera={{ position: [5, 4, 8], fov: 45 }}>
           <ambientLight intensity={0.5} />
           <directionalLight position={[10, 10, 5]} intensity={1} />
@@ -363,7 +363,7 @@ export default function NeuralNetworkSimulator() {
       </div>
 
       {/* Control Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-light p-6 rounded-2xl border border-white/5">
+      <div className="sim-control-panel grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl">
         <div className="space-y-6">
             <div>
               <div className="flex justify-between text-sm mb-2">
@@ -392,7 +392,7 @@ export default function NeuralNetworkSimulator() {
 
         <div className="space-y-6 flex flex-col justify-between">
            <div>
-              <h4 className="text-sm font-bold text-white mb-3">Model Architecture</h4>
+              <h4 className="sim-section-title mb-3">Model Architecture</h4>
               {/* Architecture Editor omitted logic bounds for clarity */}
               <div className="flex bg-background/50 p-2 rounded-lg justify-between items-center px-4">
                   <span className="text-xs font-mono text-muted">INPUT</span>
@@ -404,8 +404,8 @@ export default function NeuralNetworkSimulator() {
                   <span className="text-xs font-mono text-muted">OUT</span>
                   <span className="text-white font-bold">{layers[3]}</span>
               </div>
-              <p className="text-[11px] text-muted mt-4 leading-relaxed">
-                  Executing a training pass triggers full <span className="text-accent font-bold">Forward Propagation</span> through the architecture, calculates Mean Squared Error against the Target Output, and subsequently blasts error deltas backwards using <span className="text-green-400 font-bold">Backpropagation</span>, explicitly updating connection weights on the fly!
+              <p className="sim-note mt-4">
+                  A training pass runs <span className="text-accent font-bold">forward propagation</span>, compares the guess with the target, then sends error deltas backward with <span className="text-green-400 font-bold">backpropagation</span> to update connection weights.
               </p>
            </div>
            
@@ -420,7 +420,7 @@ export default function NeuralNetworkSimulator() {
               <button
                 onClick={() => setLayers([...layers])} // Force rebuild
                 disabled={isRunning}
-                className="bg-surface hover:bg-surface-light border border-white/10 text-white py-3 px-4 rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 pointer-events-auto"
+                className="sim-icon-button py-3 px-4 rounded-xl disabled:opacity-50 pointer-events-auto"
                 title="Reset Weights"
               >
                 <RotateCcw className="w-4 h-4" />
